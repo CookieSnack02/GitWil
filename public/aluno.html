@@ -117,6 +117,11 @@
         socket.on('reset_aluno', resetarEstado);
         socket.on('bloquear_voto', bloquearTela);
 
+        socket.on('sala_encerrada', () => {
+            alert('A sala foi encerrada pelo professor.');
+            window.location.href = '/';
+        });
+
         function resetarEstado() {
             jaVotou = false; selecoes = []; 
             document.getElementById('texto-resposta').value = ''; // Limpa texto

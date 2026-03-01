@@ -194,11 +194,31 @@ io.on('connection', (socket) => {
             io.to(codigo).emit('atualizar_stats_aluno', { total: 0 });
         }
     });
+
+    socket.on('encerrar_sala', (codigo) => {
+        if (salas[codigo]) {
+            io.to(codigo).emit('sala_encerrada');
+            
+            // Desconecta todos os sockets da sala
+            const socketsNaSala = io.sockets.adapter.rooms.get(codigo);
+            if (socketsNaSala) {
+                socketsNaSala.forEach(socketId => {
+                    io.sockets.sockets.get(socketId)?.leave(codigo);
+                });
+            }
+            
+            // Remove a sala da memória
+            delete salas[codigo];
+            console.log(`Sala ${codigo} encerrada e removida.`);
+        }
+    });
+
+
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`🚀 GitWil Seguro rodando em http://localhost:${PORT}`);
+    console.log(`GitWil Seguro rodando em http://localhost:${PORT}`);
 });
 
 //Para entrar no servidor: npx nodemon server.js

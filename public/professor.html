@@ -131,7 +131,7 @@
     <!-- Proteção: redireciona se não autenticado -->
     <script>
         if (sessionStorage.getItem('gitwil-admin-auth') !== 'true') {
-            window.location.href = 'index.html';
+            window.location.href = '/';
         }
     </script>
 </head>
@@ -336,7 +336,7 @@
         function fazerLogout() {
             if(confirm("Deseja realmente sair?")) {
                 sessionStorage.removeItem('gitwil-admin-auth');
-                window.location.href = 'index.html';
+                window.location.href = '/';
             }
         }
 
@@ -678,7 +678,8 @@
 
         function resetarSala() { if(confirm("Zerar votos?")) socket.emit('resetar_sala', codigoSala); }
         function encerrarSessao() {
-            if(confirm("Voltar ao início?")) {
+            if(confirm("Encerrar sala e desconectar todos os alunos?")) {
+                socket.emit('encerrar_sala', codigoSala);
                 document.getElementById('tela-sala').style.display = 'none';
                 document.getElementById('tela-inicio').style.display = 'block';
                 codigoSala = ''; dadosAtuais = { A:0, B:0, C:0, D:0 };
@@ -735,7 +736,7 @@
                     try {
                         const item = new ClipboardItem({ "image/png": blob });
                         await navigator.clipboard.write([item]);
-                        alert("✅ QR Code copiado para a área de transferência!");
+                        alert("QR Code copiado para a área de transferência!");
                     } catch (securityError) {
                         console.warn("Clipboard bloqueado (Contexto Inseguro). Iniciando download.");
                         const link = document.createElement('a');
@@ -744,7 +745,7 @@
                         document.body.appendChild(link);
                         link.click();
                         document.body.removeChild(link);
-                        alert("⚠️ O navegador bloqueou a cópia direta (segurança). O QR Code foi baixado!");
+                        alert("O navegador bloqueou a cópia direta (segurança). O QR Code foi baixado!");
                     }
                 }, 'image/png');
             } catch (err) {
