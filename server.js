@@ -18,11 +18,11 @@ app.get('/painel', (req, res) => {
 // --- SEGURANÇA ---
 const crypto = require('crypto');
 
-const ADMIN_USER = process.env.ADMIN_USER || "wilson";
-const ADMIN_PASS_HASH = process.env.ADMIN_PASS_HASH || "df52552b4e09eb2a3e3cbb9b53b1d499260147c789e3b699b1e921252379672b";
+const ADMIN_USER = process.env.ADMIN_USER;
+const ADMIN_PASS_HASH = process.env.ADMIN_PASS_HASH;
 
 function verificarSenha(senhaDigitada) {
-    if (!senhaDigitada) return false;
+    if (!senhaDigitada || !ADMIN_PASS_HASH) return false;
     const hash = crypto.createHash('sha256').update(senhaDigitada).digest('hex');
     return hash === ADMIN_PASS_HASH;
 }
