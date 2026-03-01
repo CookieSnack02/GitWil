@@ -297,7 +297,7 @@
         const dados = await resposta.json();
         if (dados.sucesso) {
           sessionStorage.setItem('gitwil-admin-auth', 'true');
-          window.location.href = 'professor.html';
+          window.location.href = '/painel';
         } else {
           errorEl.innerText = 'Usuário ou senha incorretos';
           errorEl.style.display = 'block';

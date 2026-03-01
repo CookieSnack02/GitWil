@@ -10,6 +10,11 @@ const io = new Server(server);
 app.use(express.json()); 
 app.use(express.static(path.join(__dirname, 'public')));
 
+// --- ROTAS LIMPAS ---
+app.get('/painel', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'professor.html'));
+});
+
 // --- SEGURANÇA ---
 const ADMIN_USER = process.env.ADMIN_USER || "wilson";
 const ADMIN_PASS = process.env.ADMIN_PASS || "wilson@4321";
@@ -197,12 +202,14 @@ io.on('connection', (socket) => {
 
     socket.on('encerrar_sala', (codigo) => {
         if (salas[codigo]) {
+            // Primeiro notifica todos
             io.to(codigo).emit('sala_encerrada');
             
-            // Desconecta todos os sockets da sala
+            // Converte para array ANTES de iterar (evita problemas de modificação durante iteração)
             const socketsNaSala = io.sockets.adapter.rooms.get(codigo);
             if (socketsNaSala) {
-                socketsNaSala.forEach(socketId => {
+                const socketIds = [...socketsNaSala];
+                socketIds.forEach(socketId => {
                     io.sockets.sockets.get(socketId)?.leave(codigo);
                 });
             }
@@ -212,13 +219,9 @@ io.on('connection', (socket) => {
             console.log(`Sala ${codigo} encerrada e removida.`);
         }
     });
-
-
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`GitWil Seguro rodando em http://localhost:${PORT}`);
 });
-
-//Para entrar no servidor: npx nodemon server.js
