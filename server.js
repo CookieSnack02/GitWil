@@ -16,12 +16,19 @@ app.get('/painel', (req, res) => {
 });
 
 // --- SEGURANÇA ---
-const ADMIN_USER = process.env.ADMIN_USER || "wilson";
-const ADMIN_PASS = process.env.ADMIN_PASS || "wilson@4321";
+const crypto = require('crypto');
+
+const ADMIN_USER = process.env.ADMIN_USER;
+const ADMIN_PASS_HASH = process.env.ADMIN_PASS_HASH;
+
+function verificarSenha(senhaDigitada) {
+    const hash = crypto.createHash('sha256').update(senhaDigitada).digest('hex');
+    return hash === ADMIN_PASS_HASH;
+}
 
 app.post('/api/login', (req, res) => {
     const { usuario, senha } = req.body;
-    if (usuario === ADMIN_USER && senha === ADMIN_PASS) {
+    if (usuario === ADMIN_USER && verificarSenha(senha)) {
         res.json({ sucesso: true });
     } else {
         res.status(401).json({ sucesso: false, mensagem: "Credenciais inválidas" });
