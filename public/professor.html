@@ -293,6 +293,7 @@
                                 <select id="tipo-dados" class="form-select form-select-sm" onchange="atualizarLabels()">
                                     <option value="numero">Numérico (1, 2...)</option>
                                     <option value="porcentagem">Porcentagem (%)</option>
+                                    <option value="ambos">Ambos</option>
                                 </select>
                             </div>
                             
@@ -650,13 +651,16 @@
                             font: { weight: 'bold', size: 14 },
                             formatter: function(value, context) {
                                 const tipo = document.getElementById('tipo-dados').value;
+                                let sum = 0;
+                                context.chart.data.datasets[0].data.forEach(d => { sum += d; });
+                                
                                 if (tipo === 'porcentagem') {
-                                    let sum = 0;
-                                    let dataArr = context.chart.data.datasets[0].data;
-                                    dataArr.map(data => { sum += data; });
                                     if (sum === 0) return "0%";
-                                    let percentage = (value * 100 / sum).toFixed(1) + "%";
-                                    return percentage;
+                                    return (value * 100 / sum).toFixed(1) + "%";
+                                }
+                                if (tipo === 'ambos') {
+                                    if (sum === 0) return value + " - 0%";
+                                    return value + " - " + (value * 100 / sum).toFixed(1) + "%";
                                 }
                                 return value;
                             }
