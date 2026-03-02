@@ -5,11 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel Mestre | GitWil</title>
     
-    <script>
-  if (localStorage.getItem('gitwil-theme') === 'light') {
-    document.documentElement.classList.add('light-mode');
-  }
-</script>
+
     
     <link href="https://fonts.googleapis.com" rel="preconnect">
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
@@ -352,6 +348,8 @@
         const body = document.body;
         let isLight = localStorage.getItem('gitwil-theme') === 'light';
         if (isLight) { body.classList.add('light-mode'); btnTheme.classList.add('active'); localStorage.setItem('gitwil-theme', 'light'); }
+        setTimeout(() => { document.body.classList.add('theme-ready'); }, 100);
+
 
         function updateChartTheme() {
             if (!chartInstance) return;

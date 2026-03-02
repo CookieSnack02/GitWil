@@ -5,11 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aluno | GitWil</title>
 
-    <script>
-  if (localStorage.getItem('gitwil-theme') === 'light') {
-    document.documentElement.classList.add('light-mode');
-  }
-</script>
+
 
     <link href="assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
@@ -89,6 +85,10 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
+        
+        const savedTheme = localStorage.getItem('gitwil-theme');
+        if (savedTheme === 'light') document.body.classList.add('light-mode');
+        setTimeout(() => { document.body.classList.add('theme-ready'); }, 100);
 
 
         const socket = io({ transports: ['polling'] });
