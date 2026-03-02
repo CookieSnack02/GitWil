@@ -91,7 +91,12 @@
         setTimeout(() => { document.body.classList.add('theme-ready'); }, 100);
 
 
-        const socket = io({ transports: ['polling'] });
+        let alunoId = sessionStorage.getItem('gitwil-aluno-id');
+        if (!alunoId) {
+            alunoId = 'aluno_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+            sessionStorage.setItem('gitwil-aluno-id', alunoId);
+        }
+        const socket = io({ transports: ['polling'], auth: { alunoId: alunoId } });
         let codigoSala = '';
         let configAtual = {};
         let selecoes = [];
