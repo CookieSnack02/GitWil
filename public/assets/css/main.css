@@ -38,6 +38,20 @@ body.light-mode {
   --btn-option-border: #dee2e6;
 }
 
+html.light-mode {
+  --bg-color: #f4f7f5;
+  --text-primary: #212529;
+  --text-secondary: rgba(33, 37, 41, 0.6);
+  --accent-color: #0d83fd;
+  --surface-color: #ffffff;
+  --btn-theme-bg: #e0e0e0;
+  --border-color: rgba(0, 0, 0, 0.1);
+  --btn-option-bg: #ffffff;
+  --btn-option-text: #212529;
+  --btn-option-border: #dee2e6;
+}
+
+
 /* --- 4. ESTILOS GERAIS --- */
 body {
   background-color: var(--bg-color);
