@@ -471,7 +471,8 @@
             container.innerHTML = ''; 
             for(let i=0; i<qtd; i++) {
                 const corAtual = currentColors[i] || DEFAULT_PALETTE[i];
-                const letra = labels ? labels[i] : String.fromCharCode(65 + i); 
+                const letrasRef = ['A', 'B', 'C', 'D', 'E', 'Não sei'];
+                const letra = labels ? labels[i] : letrasRef[i];
                 const wrapper = document.createElement('div');
                 wrapper.className = 'color-wrapper';
                 wrapper.title = `Mudar cor ${letra}`;
@@ -592,8 +593,9 @@
                 labels = ['Certo', 'Errado'];
                 initialData = [0, 0];
             } else {
+                const letrasGrafico = ['A', 'B', 'C', 'D', 'E', 'Não sei'];
                 for(let i=0; i<qtdOpcoes; i++) {
-                    labels.push(String.fromCharCode(65 + i));
+                    labels.push(letrasGrafico[i]);
                     initialData.push(0);
                 }
             }

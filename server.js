@@ -54,7 +54,7 @@ function montarObjetoVotos(config) {
         votos['Certo'] = 0;
         votos['Errado'] = 0;
     } else if (config.tipoPergunta === 'multipla_escolha') {
-        const letras = ['A', 'B', 'C', 'D', 'E', 'F'];
+        const letras = ['A', 'B', 'C', 'D', 'E', 'Não sei'];
         const qtd = parseInt(config.qtdOpcoes) || 4;
         for (let i = 0; i < qtd; i++) {
             votos[letras[i]] = 0;
@@ -64,7 +64,7 @@ function montarObjetoVotos(config) {
 }
 
 io.on('connection', (socket) => {
-    const clientIp = socket.handshake.address;
+    
 
     socket.on('criar_sala', (opcoes) => {
         // opcoes pode ter: { codigoManual, qtdDigitos }
@@ -136,7 +136,7 @@ io.on('connection', (socket) => {
             socket.emit('atualizar_config_aluno', salas[codigo].config);
             socket.emit('atualizar_stats_aluno', { total: salas[codigo].total });
             
-            if (salas[codigo].voters.has(clientIp)) {
+            if (salas[codigo].voters.has(socket.id)) {
                  socket.emit('bloquear_voto');
             }
         } else {
@@ -166,7 +166,7 @@ io.on('connection', (socket) => {
         const { codigo, respostas } = dados;
 
         if (salas[codigo]) {
-            if (salas[codigo].voters.has(clientIp)) {
+            if (salas[codigo].voters.has(socket.id)) {
                 socket.emit('erro_voto', 'Você já respondeu!');
                 return;
             }
@@ -185,7 +185,7 @@ io.on('connection', (socket) => {
                 io.to(codigo).emit('atualizar_grafico', salas[codigo].votos);
             }
             
-            salas[codigo].voters.add(clientIp);
+            salas[codigo].voters.add(socket.id);
             salas[codigo].total++;
             io.to(codigo).emit('atualizar_stats_aluno', { total: salas[codigo].total });
             socket.emit('voto_confirmado');

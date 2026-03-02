@@ -157,7 +157,7 @@
             // --- MODO BOTÕES ---
             else {
                 areaBtns.style.display = 'flex';
-                let opcoes = (configAtual.tipoPergunta === 'certo_errado') ? ['Certo', 'Errado'] : ['A', 'B', 'C', 'D', 'E', 'F'].slice(0, parseInt(configAtual.qtdOpcoes));
+                let opcoes = (configAtual.tipoPergunta === 'certo_errado') ? ['Certo', 'Errado'] : ['A', 'B', 'C', 'D', 'E', 'Não sei'].slice(0, parseInt(configAtual.qtdOpcoes));
                 
                 document.getElementById('titulo-modo').innerText = configAtual.modoSelecao === 'multipla' ? 'Marque as opções corretas:' : 'Selecione sua resposta:';
 
