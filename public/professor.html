@@ -251,8 +251,8 @@
                                     <option value="2">2 Opções (A-B)</option>
                                     <option value="3">3 Opções (A-C)</option>
                                     <option value="4">4 Opções (A-D)</option>
-                                    <option value="5" selected>5 Opções (A-E)</option>
-                                    <option value="6">6 Opções (A-F)</option>
+                                    <option value="5">5 Opções (A-E)</option>
+                                    <option value="6" selected>6 Opções (A-F)</option>
                                 </select>
                                 <select id="modo-selecao" class="form-select" onchange="atualizarConfig()">
                                     <option value="unica">Única (1 Resposta)</option>
@@ -276,8 +276,8 @@
                             <hr style="border-color: var(--border-color);">
                             <label class="form-label text-muted small fw-bold">VISUAL DO GRÁFICO</label>
                             <div class="chart-controls mb-3">
-                                <button class="btn btn-outline-secondary btn-check-custom active" id="btn-bar" onclick="mudarGrafico('bar')"><i class="bi bi-bar-chart-fill"></i></button>
-                                <button class="btn btn-outline-secondary btn-check-custom" id="btn-pie" onclick="mudarGrafico('pie')"><i class="bi bi-pie-chart-fill"></i></button>
+                                <button class="btn btn-outline-secondary btn-check-custom" id="btn-bar" onclick="mudarGrafico('bar')"><i class="bi bi-bar-chart-fill"></i></button>
+                                <button class="btn btn-outline-secondary btn-check-custom active" id="btn-pie" onclick="mudarGrafico('pie')"><i class="bi bi-pie-chart-fill"></i></button>
                                 <button class="btn btn-outline-secondary btn-check-custom" id="btn-doughnut" onclick="mudarGrafico('doughnut')"><i class="bi bi-circle"></i></button>
                                 <button class="btn btn-outline-secondary btn-check-custom" id="btn-line" onclick="mudarGrafico('line')"><i class="bi bi-graph-up"></i></button>
                                 <button class="btn btn-outline-secondary btn-check-custom" id="btn-polarArea" onclick="mudarGrafico('polarArea')"><i class="bi bi-bullseye"></i></button>
@@ -292,7 +292,7 @@
                                 </div>
                                 <select id="tipo-dados" class="form-select form-select-sm" onchange="atualizarLabels()">
                                     <option value="numero">Numérico (1, 2...)</option>
-                                    <option value="porcentagem">Porcentagem (%)</option>
+                                    <option value="porcentagem" selected>Porcentagem (%)</option>
                                     <option value="ambos">Ambos</option>
                                 </select>
                             </div>
@@ -333,7 +333,7 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         Chart.register(ChartDataLabels);
-        const DEFAULT_PALETTE = ['#0d6efd', '#dc3545', '#ffc107', '#198754', '#6610f2', '#fd7e14'];
+        const DEFAULT_PALETTE = ['#0d6efd', '#08c7f7', '#ffc106', '#198754', '#6610f2', '#fd7e14'];
         let currentColors = [...DEFAULT_PALETTE]; 
 
         // --- LOGOUT (agora redireciona para index.html) ---
@@ -498,19 +498,29 @@
         }
 
         function resetarCores() {
+            // 1. Restaura cores
             currentColors = [...DEFAULT_PALETTE];
-            const tipo = document.getElementById('tipo-pergunta').value;
-            const qtd = parseInt(document.getElementById('qtd-opcoes').value);
             
-            if (tipo === 'certo_errado') { gerarInputsDeCor(2, ['Certo', 'Errado']); } 
-            else if (tipo !== 'discursiva') { gerarInputsDeCor(qtd); }
+            // 2. Restaura tipo de gráfico para pizza
+            chartType = 'pie';
+            document.querySelectorAll('.btn-check-custom').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn-pie').classList.add('active');
             
-            if(chartInstance && tipo !== 'discursiva') {
-                const dadosAtuaisLength = chartInstance.data.datasets[0].data.length;
-                chartInstance.data.datasets[0].backgroundColor = currentColors.slice(0, dadosAtuaisLength);
-                chartInstance.data.datasets[0].pointBackgroundColor = currentColors.slice(0, dadosAtuaisLength);
-                chartInstance.update();
-            }
+            // 3. Restaura visualização para porcentagem
+            document.getElementById('tipo-dados').value = 'porcentagem';
+            document.getElementById('show-labels').checked = true;
+            
+            // 4. Restaura quantidade de opções para 6
+            document.getElementById('qtd-opcoes').value = '6';
+            
+            // 5. Restaura modo de seleção para única
+            document.getElementById('modo-selecao').value = 'unica';
+            
+            // 6. Restaura tipo de pergunta para múltipla escolha
+            document.getElementById('tipo-pergunta').value = 'multipla_escolha';
+            
+            // 7. Atualiza tudo (cores, gráfico, visibilidade e notifica alunos)
+            atualizarConfig();
         }
 
         function atualizarConfig() {
