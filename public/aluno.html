@@ -91,11 +91,28 @@
         setTimeout(() => { document.body.classList.add('theme-ready'); }, 100);
 
 
-        let alunoId = sessionStorage.getItem('gitwil-aluno-id');
-        if (!alunoId) {
-            alunoId = 'aluno_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
-            sessionStorage.setItem('gitwil-aluno-id', alunoId);
+        function gerarFingerprint() {
+            const dados = [
+                navigator.userAgent,
+                navigator.language,
+                screen.width + 'x' + screen.height,
+                screen.colorDepth,
+                new Date().getTimezoneOffset(),
+                navigator.hardwareConcurrency || '',
+                navigator.platform || ''
+            ].join('|');
+            
+            let hash = 0;
+            for (let i = 0; i < dados.length; i++) {
+                const char = dados.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            return 'fp_' + Math.abs(hash).toString(36);
         }
+
+        const alunoId = gerarFingerprint();
+
         const socket = io({ transports: ['polling'], auth: { alunoId: alunoId } });
         let codigoSala = '';
         let configAtual = {};
