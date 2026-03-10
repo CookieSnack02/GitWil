@@ -118,6 +118,7 @@
         let configAtual = {};
         let selecoes = [];
         let jaVotou = false;
+        let timeoutBloqueio = null;
 
         window.onload = function() {
             const params = new URLSearchParams(window.location.search);
@@ -151,7 +152,9 @@
         });
 
         function resetarEstado() {
-            jaVotou = false; selecoes = []; 
+            clearTimeout(timeoutBloqueio);
+            jaVotou = false; 
+            selecoes = []; 
             document.getElementById('texto-resposta').value = ''; // Limpa texto
             desbloquearTela(); 
             renderizarInterface();
@@ -243,7 +246,7 @@
             setTimeout(() => {
                 botaoAlvo.classList.remove('enviando');
                 botaoAlvo.classList.add('sucesso');
-                setTimeout(() => bloquearTela(), 1200);
+                timeoutBloqueio = setTimeout(() => bloquearTela(), 1200);
             }, 1500);
         }
 

@@ -454,12 +454,13 @@
 
         socket.on('sala_criada', (codigo) => {
             codigoSala = codigo;
+            sessionStorage.setItem('gitwil_sala_ativa', codigo);
             document.getElementById('tela-inicio').style.display = 'none';
             document.getElementById('tela-sala').style.display = 'block';
             document.getElementById('display-codigo').innerText = codigo;
             document.getElementById("qrcode").innerHTML = "";
             const baseUrl = `${window.location.protocol}//${window.location.host}`;
-            new QRCode(document.getElementById("qrcode"), { text: `${baseUrl}/aluno.html?codigo=${codigo}`, width: 128, height: 128 });
+            new QRCode(document.getElementById("qrcode"), { text: `${baseUrl}/`, width: 128, height: 128 });
             iniciarGrafico();
             atualizarConfig();
             document.getElementById('input-codigo-manual').value = '';
@@ -611,18 +612,19 @@
                 }
             }
 
+
             let scalesConfig = {};
             if (chartType === 'bar' || chartType === 'line') {
                 scalesConfig = {
-                    y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } }, 
-                    x: { grid: { display: (chartType !== 'bar') }, ticks: { color: textColor } } 
+                    y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor, font: { size: 18, weight: 'bold' } } }, 
+                    x: { grid: { display: (chartType !== 'bar') }, ticks: { color: textColor, font: { size: 18, weight: 'bold' } } } 
                 };
             } else if (chartType === 'polarArea' || chartType === 'radar') {
                 scalesConfig = {
                     r: {
                         grid: { color: gridColor },
-                        ticks: { backdropColor: 'transparent', color: isLight ? '#666' : '#aaa' },
-                        pointLabels: { color: textColor, font: { size: 14 } }
+                        ticks: { backdropColor: 'transparent', color: isLight ? '#666' : '#aaa', font: { size: 16, weight: 'bold' } },
+                        pointLabels: { color: textColor, font: { size: 18, weight: 'bold' } }
                     }
                 };
             } else {
@@ -650,7 +652,13 @@
                     responsive: true, 
                     maintainAspectRatio: false, 
                     plugins: { 
-                        legend: { display: (chartType !== 'bar' && chartType !== 'line'), labels: { color: textColor } },
+                        legend: { 
+                            display: (chartType !== 'bar' && chartType !== 'line'), 
+                            labels: { 
+                                color: textColor, 
+                                font: { size: 20, weight: 'bold' } // FONTE DA LEGENDA AUMENTADA
+                            } 
+                        },
                         datalabels: {
                             display: function(context) {
                                 return document.getElementById('show-labels').checked && context.dataset.data[context.dataIndex] > 0;
@@ -658,7 +666,7 @@
                             color: (chartType === 'line' || chartType === 'radar') ? textColor : '#fff',
                             align: (chartType === 'line') ? 'top' : 'center',
                             anchor: (chartType === 'line') ? 'end' : 'center',
-                            font: { weight: 'bold', size: 14 },
+                            font: { weight: 'bold', size: 26 }, // FONTE DOS NÚMEROS AUMENTADA
                             formatter: function(value, context) {
                                 const tipo = document.getElementById('tipo-dados').value;
                                 let sum = 0;
@@ -676,7 +684,7 @@
                             }
                         }
                     },
-                    scales: scalesConfig
+                    scales: scalesConfig // Vamos ajustar o scalesConfig logo acima dessa declaração
                 }
             });
         }
@@ -700,6 +708,7 @@
         function resetarSala() { if(confirm("Zerar votos?")) socket.emit('resetar_sala', codigoSala); }
         function encerrarSessao() {
             if(confirm("Encerrar sala e desconectar todos os alunos?")) {
+                sessionStorage.removeItem('gitwil_sala_ativa');
                 socket.emit('encerrar_sala', codigoSala);
                 document.getElementById('tela-sala').style.display = 'none';
                 document.getElementById('tela-inicio').style.display = 'block';
@@ -708,15 +717,18 @@
             }
         }
 
-        async function copiarGrafico() {
+async function copiarGrafico() {
             const canvasOriginal = document.getElementById('meuGrafico');
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = canvasOriginal.width;
             tempCanvas.height = canvasOriginal.height;
             const tempCtx = tempCanvas.getContext('2d');
+            
+            // Fundo branco
             tempCtx.fillStyle = '#ffffff';
             tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-            const oldTextColor = Chart.defaults.color;
+            
+            // Força todas as fontes para preto antes de copiar
             if(chartInstance.options.scales.x) chartInstance.options.scales.x.ticks.color = '#000000';
             if(chartInstance.options.scales.y) chartInstance.options.scales.y.ticks.color = '#000000';
             if(chartInstance.options.scales.r) {
@@ -724,9 +736,23 @@
                 chartInstance.options.scales.r.ticks.color = '#000000';
             }
             if (chartInstance.options.plugins.legend) chartInstance.options.plugins.legend.labels.color = '#000000';
+            
+            // NOVA LINHA: Força os números de dentro do gráfico (datalabels) para preto
+            if (chartInstance.options.plugins.datalabels) chartInstance.options.plugins.datalabels.color = '#000000';
+            
             chartInstance.update();
             tempCtx.drawImage(canvasOriginal, 0, 0);
+            
+            // Restaura o tema original
             updateChartTheme();
+            
+            // NOVA LINHA: Restaura a cor dos números baseada no tipo de gráfico
+            if (chartInstance.options.plugins.datalabels) {
+                chartInstance.options.plugins.datalabels.color = (chartType === 'line' || chartType === 'radar') ? Chart.defaults.color : '#fff';
+            }
+            chartInstance.update();
+
+            // Salva no clipboard ou faz download
             tempCanvas.toBlob(async (blob) => {
                 try {
                     const item = new ClipboardItem({ "image/png": blob });
@@ -786,6 +812,15 @@
             document.getElementById('total-votos').innerText = total;
             chartInstance.update();
         });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const salaSalva = sessionStorage.getItem('gitwil_sala_ativa');
+            if (salaSalva) {
+                socket.emit('recuperar_sala_professor', salaSalva);
+            }
+        });
+
+
     </script>
 </body>
 </html>

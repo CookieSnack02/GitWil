@@ -1,23 +1,35 @@
 const express = require('express');
 const app = express();
-const path = require('path');
 const http = require('http');
 const { Server } = require("socket.io");
-
-const server = http.createServer(app);
-const io = new Server(server);
-
-app.use(express.json()); 
-app.use(express.static(path.join(__dirname, 'public')));
-
-// --- ROTAS LIMPAS ---
-app.get('/painel', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'professor.html'));
-});
-
-// --- SEGURANÇA ---
 const crypto = require('crypto');
 
+// 1. IMPORTANDO E CONFIGURANDO O CORS (Essencial para separar Front e Back)
+const cors = require('cors');
+
+const server = http.createServer(app);
+
+// 2. CONFIGURANDO O SOCKET.IO PARA ACEITAR SUA HOSPEDAGEM
+const io = new Server(server, {
+    cors: {
+        origin: ["https://gitwil.com.br", "https://www.gitwil.com.br", "http://localhost:3000", "http://127.0.0.1:3000"],
+        methods: ["GET", "POST"]
+    }
+});
+
+app.use(express.json()); 
+
+// 3. CONFIGURANDO O EXPRESS PARA ACEITAR O LOGIN DA SUA HOSPEDAGEM
+app.use(cors({ 
+    origin: ["https://gitwil.com.br", "https://www.gitwil.com.br", "http://localhost:3000", "http://127.0.0.1:3000"] 
+}));
+
+// Removi as rotas de app.use(express.static(...)) e app.get('/painel') 
+// porque os arquivos HTML ficarão na Hostinger.
+
+
+
+// --- SEGURANÇA ---
 const ADMIN_USER = process.env.ADMIN_USER || "wilson";
 const ADMIN_PASS_HASH = process.env.ADMIN_PASS_HASH || "df52552b4e09eb2a3e3cbb9b53b1d499260147c789e3b699b1e921252379672b";
 
@@ -113,7 +125,7 @@ io.on('connection', (socket) => {
         const configInicial = {
             tipoPergunta: 'multipla_escolha',
             modoSelecao: 'unica',
-            qtdOpcoes: 4
+            qtdOpcoes: 6 // Atualizado para o seu padrão de 6 opções
         };
 
         salas[codigo] = {
@@ -227,9 +239,25 @@ io.on('connection', (socket) => {
             console.log(`Sala ${codigo} encerrada e removida.`);
         }
     });
+
+    // 4. CORREÇÃO DO F5: RECONECTANDO O PROFESSOR E ENVIANDO OS DADOS
+    socket.on('recuperar_sala_professor', (codigo) => {
+        if (salas[codigo]) {
+            socket.join(codigo);
+            socket.emit('sala_criada', codigo);
+            // IMPORTANTE: Enviar a config atualizada também, para o painel saber quantas opções tinha
+            socket.emit('atualizar_config_aluno', salas[codigo].config); 
+            socket.emit('atualizar_grafico', salas[codigo].votos);
+            socket.emit('atualizar_discursivas', salas[codigo].respostasDiscursivas);
+            socket.emit('atualizar_stats_aluno', { total: salas[codigo].total });
+        } else {
+            socket.emit('erro_criar_sala', 'A sessão anterior foi encerrada ou expirou.');
+        }
+    });
+
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`GitWil Seguro rodando em http://localhost:${PORT}`);
+    console.log(`API do GitWil rodando na porta ${PORT}`);
 });
