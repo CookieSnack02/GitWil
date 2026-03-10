@@ -113,7 +113,7 @@
 
         const alunoId = gerarFingerprint();
 
-        const socket = io({ transports: ['polling'], auth: { alunoId: alunoId } });
+        const socket = io('https://gitwil.onrender.com', { auth: { alunoId: alunoId } });
         let codigoSala = '';
         let configAtual = {};
         let selecoes = [];
