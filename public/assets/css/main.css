@@ -1,0 +1,385 @@
+/**
+* MODO MOBILE FLUIDO & PERSISTENTE - GITWIL (FINAL)
+*/
+
+:root {
+  /* --- 1. DEFINIÇÃO DAS FONTES --- */
+  --default-font: "Nunito", sans-serif; /* Alterado para Nunito como padrão global */
+  --heading-font: "Nunito", sans-serif;
+
+  /* --- 2. CORES DARK (PADRÃO) --- */
+  --bg-color: #121212;
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.6);
+  --accent-color: #0d83fd;     /* Azul GitWil */
+  --surface-color: #1e1e1e;    /* Cards e Inputs */
+  --btn-theme-bg: #2a2a2a;     /* Fundo do botão de tema */
+  --border-color: rgba(255, 255, 255, 0.1);
+  
+  /* Cores dos botões de votação (Aluno) */
+  --btn-option-bg: #1e1e1e;
+  --btn-option-text: #ffffff;
+  --btn-option-border: #333333;
+}
+
+/* --- 3. VARIÁVEIS LIGHT MODE --- */
+body.light-mode {
+  --bg-color: #f4f7f5;
+  --text-primary: #212529;
+  --text-secondary: rgba(33, 37, 41, 0.6);
+  --accent-color: #0d83fd;
+  --surface-color: #ffffff;
+  --btn-theme-bg: #e0e0e0;
+  --border-color: rgba(0, 0, 0, 0.1);
+
+  /* Botões claros no modo light */
+  --btn-option-bg: #ffffff;
+  --btn-option-text: #212529;
+  --btn-option-border: #dee2e6;
+}
+
+
+
+/* --- 4. ESTILOS GERAIS --- */
+body {
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  font-family: var(--default-font);
+  margin: 0;
+  overflow-x: hidden;
+}
+
+body.theme-ready {
+  transition: background-color 0.6s cubic-bezier(0.4, 0, 0.2, 1), color 0.6s ease;
+}
+
+
+
+h1, h2, h3, h4, h5 { 
+  font-family: var(--heading-font); 
+  color: var(--text-primary); 
+  font-weight: 700;
+}
+
+.sitename {
+  font-family: var(--heading-font) !important;
+  font-weight: 800;
+}
+
+.text-muted { color: var(--text-secondary) !important; }
+.subtitle { color: var(--text-secondary); transition: color 0.6s ease; }
+
+/* =======================================================
+   ESTILOS ESPECÍFICOS DO PAINEL DO PROFESSOR
+   ======================================================= */
+.painel-card {
+    background-color: var(--surface-color);
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1); /* Sombra suave */
+    border: 1px solid var(--border-color);
+    transition: background-color 0.6s ease, border-color 0.6s ease;
+}
+
+/* Inputs do Painel */
+.form-control {
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 10px 15px;
+}
+
+.form-control:focus {
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 0.25rem rgba(13, 131, 253, 0.25);
+}
+
+/* Botão Selecionado (Verde) */
+.btn-check-custom.active {
+    border-color: #198754 !important; /* Verde Bootstrap */
+    color: #198754 !important;
+    background-color: rgba(25, 135, 84, 0.1);
+    box-shadow: 0 0 10px rgba(25, 135, 84, 0.2);
+}
+
+/* Botão QR Code Visível */
+.btn-qr {
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+.btn-qr:hover {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+/* =======================================================
+   INPUT DE CÓDIGO (INDEX) & BOTÃO TEMA
+   ======================================================= */
+.input-animation-wrapper { font-size: 12px; position: relative; width: 20em; height: 6.25em; margin-top: 2rem; }
+.c-checkbox { display: none; }
+.c-checkbox:checked + .c-formContainer .c-form { width: 22em; }
+.c-checkbox:checked + .c-formContainer .c-form__toggle { visibility: hidden; opacity: 0; transform: scale(0.7); }
+.c-checkbox:checked + .c-formContainer .c-form__input, .c-checkbox:checked + .c-formContainer .c-form__buttonLabel { transition: 0.2s 0.1s; visibility: visible; opacity: 1; transform: scale(1); }
+.c-formContainer { position: relative; width: 100%; height: 100%; }
+.c-form { position: absolute; left: 50%; transform: translateX(-50%); border-radius: 6.25em; background-color: var(--surface-color); transition: width 0.3s ease, background-color 0.6s ease; padding: 0.625em; box-sizing: border-box; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15); display: flex; justify-content: center; width: 10em; height: 6.25em; }
+.c-form__toggle { color: var(--accent-color); font-weight: 700; top: 0; left: 0; width: 100%; height: 100%; cursor: pointer; position: absolute; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+.c-form__toggle::before { content: attr(data-title); }
+.c-form__input { font: inherit; border: 0; outline: 0; border-radius: 5em; color: var(--accent-color); background: transparent; height: 100%; width: 100%; padding: 0 0.714em; font-weight: 700; letter-spacing: 3px; text-align: center; font-size: 1.75em; opacity: 0; visibility: hidden; transform: scale(0.7); transition: 0s; }
+.c-form__input::placeholder { color: var(--text-primary); opacity: 0.2; letter-spacing: normal; }
+.c-form__buttonLabel { height: 100%; width: auto; cursor: default; display: flex; align-items: center; opacity: 0; visibility: hidden; transform: scale(0.7); transition: 0s; }
+.c-form__button { border: 0; outline: 0; border-radius: 5em; color: #fff; padding: 0 25px; height: 100%; font-weight: 600; font-size: 1rem; background-color: var(--accent-color); cursor: pointer; box-shadow: 0 4px 15px rgba(13, 131, 253, 0.4); }
+
+.theme-toggle-wrapper { margin-top: 4rem; display: flex; justify-content: center; }
+.btn-theme { width: 70px; height: 70px; border-radius: 50%; border: none; background-color: var(--btn-theme-bg); position: relative; cursor: pointer; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.1); transition: background-color 0.6s ease; display: flex; align-items: center; justify-content: center; }
+.btn-theme::after { content: ''; position: absolute; top: 50%; left: 50%; width: 200%; height: 200%; background-color: #ffc107; border-radius: 50%; transform: translate(-50%, -50%) scale(0); transition: transform 0.6s cubic-bezier(0.65, 0, 0.35, 1); z-index: 1; }
+.btn-theme.active::after { transform: translate(-50%, -50%) scale(1); }
+.icon-wrapper { position: relative; z-index: 2; width: 40px; height: 40px; overflow: hidden; }
+.icon-wrapper i { position: absolute; top: 0; left: 0; width: 100%; height: 100%; line-height: 40px; text-align: center; font-size: 1.5rem; transition: transform 0.6s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.4s ease; }
+.icon-moon { color: var(--text-primary); transform: translateY(0); opacity: 1; }
+.icon-sun { color: #fff; transform: translateY(40px); opacity: 0; }
+.btn-theme.active .icon-moon { transform: translateY(-40px); opacity: 0; }
+.btn-theme.active .icon-sun { transform: translateY(0); opacity: 1; }
+
+/* =======================================================
+   ESTILOS DA PÁGINA DO ALUNO - SMOOTH V2 (CORRIGIDO)
+   ======================================================= */
+
+.full-h {
+  min-height: 100vh;
+  display: flex; flex-direction: column; justify-content: center; padding: 20px;
+}
+
+/* --- ESTILO BASE DO BOTÃO --- */
+.btn-opcao, #btn-confirmar {
+  position: relative; /* Necessário para posicionar ícones dentro */
+  height: 65px;      /* Um pouco mais alto para elegância */
+  font-family: var(--default-font);
+  font-weight: 800;
+  font-size: 1.4rem;
+  border-radius: 65px; /* Pílula perfeita */
+  margin-bottom: 15px;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.3s ease; /* Transição geral suave */
+  border: none;
+  overflow: hidden; /* Garante que nada saia do botão */
+  
+  /* Cores Padrão (Dark/Light adaptável) */
+  background-color: var(--surface-color);
+  color: var(--text-primary);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  border: 2px solid transparent; /* Borda transparente para não pular no hover */
+}
+
+/* Container para o Texto e Ícones dentro do botão */
+.btn-content-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* O texto (A, B, C...) */
+.btn-texto {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Ícones (Spinner e Check) - Escondidos inicialmente */
+.btn-icon-anim {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.5); /* Começa menor */
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Efeito elástico */
+    font-size: 1.8rem;
+}
+
+/* --- ESTADOS DE INTERAÇÃO --- */
+
+/* Hover normal */
+.btn-opcao:hover:not(.enviando):not(.sucesso), 
+#btn-confirmar:hover:not(.enviando):not(.sucesso) {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  color: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+/* Selecionado (Modo Múltiplo) */
+.btn-opcao.selecionado {
+  background-color: var(--accent-color) !important;
+  color: white !important;
+  box-shadow: 0 5px 15px rgba(13, 131, 253, 0.4);
+}
+
+/* --- ESTADO 1: ENVIANDO (Spinner) --- */
+.btn-opcao.enviando, #btn-confirmar.enviando {
+    background-color: var(--surface-color) !important;
+    color: var(--accent-color) !important;
+    border-color: var(--accent-color) !important;
+    pointer-events: none; /* Bloqueia cliques */
+}
+
+/* Esconde o texto */
+.btn-opcao.enviando .btn-texto, #btn-confirmar.enviando .btn-texto {
+    opacity: 0;
+    transform: translateY(20px); /* Texto desce */
+}
+
+/* Mostra o Spinner e anima */
+.btn-opcao.enviando .icon-spinner, #btn-confirmar.enviando .icon-spinner {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    animation: spinSmooth 1s linear infinite;
+}
+
+/* --- ESTADO 2: SUCESSO (Check Verde) --- */
+.btn-opcao.sucesso, #btn-confirmar.sucesso {
+    background-color: #198754 !important; /* Verde Bootstrap */
+    color: white !important;
+    border-color: #198754 !important;
+    pointer-events: none;
+}
+
+/* Garante texto e spinner escondidos */
+.btn-opcao.sucesso .btn-texto, .btn-opcao.sucesso .icon-spinner { opacity: 0; }
+
+/* Mostra o Check com efeito elástico */
+.btn-opcao.sucesso .icon-check {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.2); /* Fica um pouco maior */
+}
+
+/* Animação de Rotação Suave */
+@keyframes spinSmooth {
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.bloqueado { opacity: 0.5; pointer-events: none; transition: opacity 0.5s ease; }
+
+
+/* =======================================================
+   LOGOS COM TROCA DE TEMA SUAVE
+   ======================================================= */
+
+/* O Container que segura as duas imagens no mesmo lugar */
+.logo-container {
+  display: grid;
+  place-items: center;
+  /* Define o tamanho da área do logo */
+  width: 120px; 
+  height: 120px;
+  /* Centraliza o container na página */
+  margin-left: auto;
+  margin-right: auto;
+  position: relative;
+}
+
+/* Estilos comuns para AMBAS as imagens */
+.theme-logo {
+  /* Faz as imagens ocuparem o mesmo espaço (empilhadas) */
+  grid-area: 1 / 1;
+  
+  width: 120px;
+  height: 120px;
+  border-radius: 50%; /* Arredonda */
+  object-fit: cover;  /* Evita distorção */
+  
+  /* Sombra suave (visível nos dois modos) */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  
+  /* Transição suave de 0.6s para combinar com o resto do site */
+  transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s ease;
+}
+
+/* --- ESTADO PADRÃO (MODO ESCURO) --- */
+.logo-dark {
+  opacity: 1; /* Logo escuro visível */
+  z-index: 2; /* Fica na frente */
+}
+
+.logo-light {
+  opacity: 0; /* Logo claro invisível */
+  z-index: 1;
+}
+
+/* --- ESTADO MODO CLARO (Quando body tem a classe .light-mode) --- */
+body.light-mode .logo-dark {
+  opacity: 0; /* Logo escuro some suavemente */
+  z-index: 1;
+}
+
+body.light-mode .logo-light {
+  opacity: 1; /* Logo claro aparece suavemente */
+  z-index: 2;
+}
+
+/* Efeito opcional de flutuar ao passar o mouse */
+.logo-container:hover .theme-logo {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* =======================================================
+   DROPDOWNS MODERNOS (SELECTS) - ADICIONADO
+   ======================================================= */
+
+.form-select {
+  appearance: none; /* Remove o estilo nativo feio */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  border: 1px solid var(--btn-option-border);
+  border-radius: 12px; /* Cantos bem arredondados */
+  padding: 12px 20px;  /* Mais espaço interno */
+  font-family: var(--default-font);
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  
+  /* Sombra suave */
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  
+  /* Seta Customizada (SVG Encoded Azul) */
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%230d83fd' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 16px 12px;
+}
+
+/* Estado Focus (Ao clicar) */
+.form-select:focus {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 4px rgba(13, 131, 253, 0.15); /* Glow suave */
+  outline: none;
+  transform: translateY(-1px);
+}
+
+/* Estado Hover (Passar o mouse) */
+.form-select:hover {
+  border-color: var(--text-secondary);
+  background-color: var(--surface-color); /* Leve destaque no fundo */
+}
+
+/* Ajuste para o modo claro */
+body.light-mode .form-select {
+  background-color: #ffffff;
+}
+
+/* Estilo das opções internas */
+.form-select option {
+  background-color: var(--surface-color);
+  color: var(--text-primary);
+  padding: 10px;
+}
+
