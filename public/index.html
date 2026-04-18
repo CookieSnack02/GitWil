@@ -4,7 +4,21 @@
 <head>
   <meta charset="utf-8">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
-  <title>Gitwil</title>
+  <title>GitWil - Quiz Interativo</title>
+  <meta name="description" content="GitWil é uma plataforma gratuita de quiz interativo em tempo real. Crie salas, envie perguntas e acompanhe as respostas dos alunos instantaneamente.">
+  <meta name="keywords" content="quiz interativo, quiz sala de aula, quiz tempo real, gitwil, plataforma educacional, quiz online, resposta ao vivo">
+  <meta name="author" content="GitWil">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://gitwil.com.br/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="GitWil - Quiz Interativo em Tempo Real">
+  <meta property="og:description" content="Crie salas de quiz, envie perguntas e veja as respostas dos alunos em tempo real. Gratuito e sem cadastro.">
+  <meta property="og:url" content="https://gitwil.com.br/">
+  <meta property="og:site_name" content="GitWil">
+  <meta property="og:locale" content="pt_BR">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="GitWil - Quiz Interativo em Tempo Real">
+  <meta name="twitter:description" content="Plataforma de quiz interativo para sala de aula. Respostas em tempo real.">
 
 
   <link rel="apple-touch-icon" sizes="180x180" href="assets/img/favicon/apple-touch-icon.png">
@@ -298,18 +312,37 @@
         </a>
       </div>
       <button type="button" class="btn-social-close" onclick="fecharSocial()">FECHAR</button>
+      <p class="text-center text-muted mt-3" style="font-size: 0.75rem;">Sistema desenvolvido por João Paulo Manzioli Silva</p>
     </div>
   </div>
 
-  <script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
-
   <script>
+    window.GITWIL_CONFIG = (() => {
+      const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const apiUrl = isLocalHost
+        ? 'http://localhost:3000'
+        : 'https://gitwil-api-production.up.railway.app';
+
+      return {
+        apiUrl,
+        routes: {
+          home: new URL('./index.html', window.location.href).href,
+          aluno: new URL('./aluno.html', window.location.href).href,
+          professor: new URL('./professor.html', window.location.href).href,
+        }
+      };
+    })();
+
+    const apiUrl = window.GITWIL_CONFIG.apiUrl;
+    const routes = window.GITWIL_CONFIG.routes;
     // --- Lógica de Input (original) ---
     function irParaSala() {
       const input = document.getElementById('input-codigo-home');
       const codigo = input.value;
       if (codigo && codigo.length >= 3) {
-        window.location.href = `aluno.html?codigo=${codigo}`;
+        const destino = new URL(routes.aluno);
+        destino.searchParams.set('codigo', codigo);
+        window.location.href = destino.href;
       } else {
         input.style.color = "#ff6b6b"; 
         setTimeout(() => input.style.color = "var(--accent-color)", 1000);
@@ -383,18 +416,8 @@
       }
     });
 
-    // --- Pop-up Redes Sociais: 3 cliques no nome do rodapé ---
-    let footerTapCount = 0;
-    let footerTapTimer = null;
-
     document.getElementById('footer-name').addEventListener('click', () => {
-      footerTapCount++;
-      clearTimeout(footerTapTimer);
-      footerTapTimer = setTimeout(() => { footerTapCount = 0; }, 600);
-      if (footerTapCount >= 3) {
-        footerTapCount = 0;
-        abrirSocial();
-      }
+      abrirSocial();
     });
 
     function abrirSocial() {
@@ -417,7 +440,7 @@
       errorEl.style.display = 'none';
 
       try {
-        const resposta = await fetch('https://gitwil.onrender.com/api/login', {
+        const resposta = await fetch(apiUrl + '/api/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ usuario: user, senha: pass })
@@ -425,7 +448,7 @@
         const dados = await resposta.json();
         if (dados.sucesso) {
           sessionStorage.setItem('gitwil-admin-auth', 'true');
-          window.location.href = '/painel';
+          window.location.href = routes.professor;
         } else {
           errorEl.innerText = 'Usuário ou senha incorretos';
           errorEl.style.display = 'block';

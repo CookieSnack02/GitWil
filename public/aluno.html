@@ -3,8 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aluno | GitWil</title>
+    
+    <title>Responder Quiz | GitWil - Quiz Interativo</title>
+    <meta name="description" content="Responda ao quiz interativo em tempo real. Entre com o código da sala e participe.">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="canonical" href="https://gitwil.com.br/aluno.html">
 
+    
 
 
     <link href="assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
@@ -83,56 +88,128 @@
         </div>
     </div>
 
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
     <script>
+        window.GITWIL_CONFIG = (() => {
+            const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const apiUrl = isLocalHost
+                ? 'http://localhost:3000'
+                : 'https://gitwil-api-production.up.railway.app';
+
+            return {
+                apiUrl,
+                routes: {
+                    home: new URL('./index.html', window.location.href).href,
+                    aluno: new URL('./aluno.html', window.location.href).href,
+                    professor: new URL('./professor.html', window.location.href).href
+                }
+            };
+        })();
+
         
         const savedTheme = localStorage.getItem('gitwil-theme');
+        const apiUrl = window.GITWIL_CONFIG.apiUrl;
+        const routes = window.GITWIL_CONFIG.routes;
+
         if (savedTheme === 'light') document.body.classList.add('light-mode');
         setTimeout(() => { document.body.classList.add('theme-ready'); }, 100);
 
-
-        function gerarFingerprint() {
-            const dados = [
-                navigator.userAgent,
-                navigator.language,
-                screen.width + 'x' + screen.height,
-                screen.colorDepth,
-                new Date().getTimezoneOffset(),
-                navigator.hardwareConcurrency || '',
-                navigator.platform || ''
-            ].join('|');
-            
-            let hash = 0;
-            for (let i = 0; i < dados.length; i++) {
-                const char = dados.charCodeAt(i);
-                hash = ((hash << 5) - hash) + char;
-                hash = hash & hash;
+        // Gera ou recupera um ID único por browser para controle de votação duplicada.
+        // Usa localStorage para que o mesmo ID seja compartilhado entre todas as abas
+        // do mesmo browser, impedindo que o aluno vote em múltiplas guias.
+        //
+        // LIMITAÇÕES CONHECIDAS:
+        // 1. O aluno pode burlar limpando o localStorage (Configurações do browser → Limpar dados).
+        //    Após limpar, um novo ID é gerado e o aluno pode votar novamente.
+        // 2. No Safari em modo privado, localStorage é volátil: é limpo ao fechar a aba,
+        //    permitindo que o aluno vote novamente ao reabrir. Mesma fragilidade de cookies.
+        // 3. Browsers com política de privacidade restrita podem bloquear localStorage,
+        //    causando erro silencioso. Nesse caso o aluno recebe um novo ID a cada visita.
+        // 4. Diferentes browsers na mesma máquina (Chrome + Firefox) geram IDs distintos —
+        //    isso é intencional, pois representam "dispositivos" diferentes, como no Mentimeter.
+        //
+        // Para bloqueio definitivo seria necessário login com autenticação de usuário.
+        function obterOuCriarIdVotante() {
+            const KEY = 'gitwil_voter_id';
+            let id = localStorage.getItem(KEY);
+            if (!id) {
+                id = 'ls_' + ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+                    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+                );
+                localStorage.setItem(KEY, id);
             }
-            return 'fp_' + Math.abs(hash).toString(36);
+            return id;
         }
 
-        const alunoId = gerarFingerprint();
+        const alunoId = obterOuCriarIdVotante();
 
-        const socket = io('https://gitwil.onrender.com', { auth: { alunoId: alunoId } });
+//Agora usando WebSocket real via Railway (não mais long polling!)
+        const socket = io(apiUrl, { auth: { alunoId: alunoId } });
         let codigoSala = '';
         let configAtual = {};
         let selecoes = [];
         let jaVotou = false;
-        let timeoutBloqueio = null;
 
-        window.onload = function() {
+        // Fix 1: primeiroConnect ignora o 'connect' inicial.
+        // Na primeira carga, o window.onload enfileira entrar_sala antes do socket
+        // conectar. Quando o socket conecta, 'connect' dispara e codigoSala já
+        // está definido — sem a flag, emitiria entrar_sala uma segunda vez.
+        let primeiroConnect = true;
+        socket.on('connect', () => {
+            if (primeiroConnect) { primeiroConnect = false; return; }
+            if (codigoSala) {
+                socket.emit('entrar_sala', { codigo: codigoSala });
+            }
+        });
+
+        //Problema entre o socket.on e window.onload
+        /*
+            No dia normal, a energia já está ligada quando a loja termina de ser arrumada. 
+            Então o Funcionário A abre a porta normalmente. 
+            O Funcionário B não faz nada porque a energia nunca caiu.
+            Mas em alguns dias (desktop rápido), a loja termina de ser arrumada antes da energia voltar. 
+            O Funcionário A tenta abrir a porta, mas está enfileirado esperando a energia. 
+            Quando a energia volta, o Funcionário B acorda e também tenta abrir a porta — aí os dois abrem juntos, causando confusão.
+
+        */
+
+        //Analogia Funcionário A -> Abre a porta quando a loja termina de ser arrumada
+        window.onload = async function() {
             const params = new URLSearchParams(window.location.search);
             const codigoUrl = params.get('codigo');
-            if (!codigoUrl) { alert("Acesso inválido."); window.location.href = "/"; return; }
-            codigoSala = codigoUrl;
-            socket.emit('entrar_sala', { codigo: codigoUrl });
+
+            if (codigoUrl) {
+                // Entrada normal: código digitado na home page
+                codigoSala = codigoUrl;
+                socket.emit('entrar_sala', { codigo: codigoUrl });
+            } else {
+                // Entrada via QR Code estático: busca a sala ativa no servidor
+                try {
+                    const resp = await fetch(apiUrl + '/api/sala-ativa');
+                    const dados = await resp.json();
+                    if (dados.codigo) {
+                        codigoSala = dados.codigo;
+                        socket.emit('entrar_sala', { codigo: dados.codigo });
+                    } else {
+                        document.getElementById('tela-conectando').innerHTML =
+                            '<p class="text-muted fw-bold fs-5">Nenhuma sala ativa no momento.<br>Aguarde o professor abrir uma sessão.</p>';
+                    }
+                } catch (e) {
+                    document.getElementById('tela-conectando').innerHTML =
+                        '<p class="text-muted fw-bold fs-5">Erro de conexão com o servidor.</p>';
+                }
+            }
         };
 
         socket.on('entrada_ok', () => {
             document.getElementById('tela-conectando').style.display = 'none';
             document.getElementById('tela-votacao').style.display = 'flex';
         });
-        socket.on('erro_sala', (msg) => { alert(msg); window.location.href = "/"; });
+        // Fix 2: limpa codigoSala antes do alert.
+        // O alert() bloqueia o JS — durante esse bloqueio o socket pode perder
+        // o heartbeat, desconectar e reconectar. Se codigoSala ainda tiver valor,
+        // o 'connect' emitiria entrar_sala de novo gerando um segundo alert.
+        socket.on('erro_sala', (msg) => { codigoSala = ''; alert(msg); window.location.href = routes.home; });
         socket.on('erro_voto', (msg) => alert(msg));
         
         socket.on('atualizar_stats_aluno', (d) => {
@@ -148,13 +225,11 @@
 
         socket.on('sala_encerrada', () => {
             alert('A sala foi encerrada pelo professor.');
-            window.location.href = '/';
+            window.location.href = routes.home;
         });
 
         function resetarEstado() {
-            clearTimeout(timeoutBloqueio);
-            jaVotou = false; 
-            selecoes = []; 
+            jaVotou = false; selecoes = []; 
             document.getElementById('texto-resposta').value = ''; // Limpa texto
             desbloquearTela(); 
             renderizarInterface();
@@ -243,10 +318,15 @@
             // Envia (selecoes pode ser array ou string agora)
             socket.emit('enviar_resposta', { codigo: codigoSala, respostas: selecoes });
 
+            // ATENÇÃO: a animação de sucesso dispara por timeout no cliente,
+            // sem aguardar confirmação real do servidor ('voto_confirmado').
+            // Se houver queda de rede entre o clique e o servidor processar,
+            // o aluno verá a tela de "Resposta Enviada!" mas o voto não foi contado.
+            // O evento 'voto_confirmado' existe no servidor mas não é usado aqui.
             setTimeout(() => {
                 botaoAlvo.classList.remove('enviando');
                 botaoAlvo.classList.add('sucesso');
-                timeoutBloqueio = setTimeout(() => bloquearTela(), 1200);
+                setTimeout(() => bloquearTela(), 1200);
             }, 1500);
         }
 

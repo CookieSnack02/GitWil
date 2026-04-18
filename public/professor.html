@@ -3,13 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Mestre | GitWil</title>
+
+    <title>Painel do Professor | GitWil - Quiz Interativo</title>
+    <meta name="description" content="Painel de controle do professor. Crie salas, configure perguntas e acompanhe respostas em tempo real.">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="canonical" href="https://gitwil.com.br/professor.html">
     
 
     
     <link href="https://fonts.googleapis.com" rel="preconnect">
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Poppins:wght@700;800;900&display=swap" rel="stylesheet">
     
     <link href="assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
@@ -20,9 +24,9 @@
     <link rel="icon" type="image/png" sizes="16x16" href="assets/img/favicon/favicon-16x16.png">
     <link rel="manifest" href="assets/img/favicon/site.webmanifest">
 
-    <link rel="icon" type="image/png" sizes="32x32" href="assets/img/logo-light.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="assets/img/logo-dark.png" media="(prefers-color-scheme: dark)">
-    <link rel="apple-touch-icon" href="assets/img/logo-dark.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/img/light.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/img/dark.png" media="(prefers-color-scheme: dark)">
+    <link rel="apple-touch-icon" href="assets/img/dark.png">
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
@@ -134,7 +138,7 @@
     <!-- Proteção: redireciona se não autenticado -->
     <script>
         if (sessionStorage.getItem('gitwil-admin-auth') !== 'true') {
-            window.location.href = '/';
+            window.location.href = './index.html';
         }
     </script>
 </head>
@@ -265,7 +269,10 @@
                             <hr style="border-color: var(--border-color);">
                             <label class="form-label text-muted small fw-bold">CORES DAS RESPOSTAS</label>
                             <div id="container-cores" class="color-group"></div>
-                            <div class="text-end mb-3">
+                            <div class="d-flex justify-content-between mb-3">
+                                <button class="btn btn-sm btn-link text-decoration-none p-0" onclick="salvarPaletaPersonalizada()">
+                                    <small>Salvar como Padrão</small>
+                                </button>
                                 <button class="btn btn-sm btn-link text-decoration-none p-0" onclick="resetarCores()">
                                     <small>Restaurar Padrão</small>
                                 </button>
@@ -290,7 +297,7 @@
                                     <input class="form-check-input" type="checkbox" id="show-labels" checked onchange="atualizarLabels()">
                                     <label class="form-check-label small" for="show-labels">Exibir Valores</label>
                                 </div>
-                                <select id="tipo-dados" class="form-select form-select-sm" onchange="atualizarLabels()">
+                                <select id="tipo-dados" class="form-select form-select-sm mb-2" onchange="atualizarLabels()">
                                     <option value="numero">Numérico (1, 2...)</option>
                                     <option value="porcentagem" selected>Porcentagem (%)</option>
                                     <option value="ambos">Ambos</option>
@@ -330,17 +337,38 @@
         </div>
     </div>
 
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
     <script>
+        window.GITWIL_CONFIG = (() => {
+            const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const apiUrl = isLocalHost
+                ? 'http://localhost:3000'
+                : 'https://gitwil-api-production.up.railway.app';
+
+            return {
+                apiUrl,
+                routes: {
+                    home: new URL('./index.html', window.location.href).href,
+                    aluno: new URL('./aluno.html', window.location.href).href,
+                    professor: new URL('./professor.html', window.location.href).href
+                }
+            };
+        })();
+
+        const apiUrl = window.GITWIL_CONFIG.apiUrl;
+        const routes = window.GITWIL_CONFIG.routes;
+
         Chart.register(ChartDataLabels);
         const DEFAULT_PALETTE = ['#0d6efd', '#08c7f7', '#ffc106', '#198754', '#6610f2', '#fd7e14'];
-        let currentColors = [...DEFAULT_PALETTE]; 
+        const _savedPalette = JSON.parse(localStorage.getItem('gitwil-palette'));
+        let currentColors = _savedPalette ? [..._savedPalette] : [...DEFAULT_PALETTE];
+        let labelColors = ['#ffffff', '#ffffff', '#ffffff', '#ffffff', '#ffffff', '#ffffff'];
 
         // --- LOGOUT (agora redireciona para index.html) ---
         function fazerLogout() {
             if(confirm("Deseja realmente sair?")) {
                 sessionStorage.removeItem('gitwil-admin-auth');
-                window.location.href = '/';
+                window.location.href = routes.home;
             }
         }
 
@@ -387,11 +415,49 @@
         });
 
         // --- SOCKET ---
-        const socket = io('https://gitwil.onrender.com');
+        const socket = io(apiUrl);
         let codigoSala = '';
         let chartInstance = null;
         let chartType = 'pie';
-        let dadosAtuais = { A:0, B:0, C:0, D:0 }; 
+        let dadosAtuais = { A:0, B:0, C:0, D:0 };
+        let professorReconectando = false;
+
+        // Reconexão automática ao recarregar (F5) ou reconectar após queda de rede
+        socket.on('connect', () => {
+            const savedCodigo = sessionStorage.getItem('gitwil-sala-codigo');
+            if (savedCodigo) {
+                if (!codigoSala) professorReconectando = true;
+                socket.emit('entrar_sala', { codigo: savedCodigo });
+            }
+        });
+
+        // Restaura painel da sala quando reconectado
+        socket.on('entrada_ok', () => {
+            if (!professorReconectando) return;
+            codigoSala = sessionStorage.getItem('gitwil-sala-codigo');
+            document.getElementById('tela-inicio').style.display = 'none';
+            document.getElementById('tela-sala').style.display = 'block';
+            document.getElementById('display-codigo').innerText = codigoSala;
+            gerarQRCode();
+        });
+
+        // Restaura controles de config quando reconectado
+        socket.on('atualizar_config_aluno', (config) => {
+            if (!professorReconectando) return;
+            professorReconectando = false;
+            document.getElementById('tipo-pergunta').value = config.tipoPergunta;
+            if (config.qtdOpcoes) document.getElementById('qtd-opcoes').value = config.qtdOpcoes;
+            if (config.modoSelecao) document.getElementById('modo-selecao').value = config.modoSelecao;
+            atualizarConfig(true);
+        });
+
+        // Se a sala não existir mais (ex: servidor reiniciou), limpa sessão salva
+        socket.on('erro_sala', () => {
+            if (professorReconectando) {
+                professorReconectando = false;
+                sessionStorage.removeItem('gitwil-sala-codigo');
+            }
+        });
 
         // =============================================
         // === LÓGICA DE CRIAÇÃO DE SALA ===
@@ -452,15 +518,19 @@
             msgErro.style.display = 'block';
         });
 
+        function gerarQRCode() {
+            const baseUrl = `${window.location.protocol}//${window.location.host}`;
+            document.getElementById("qrcode").innerHTML = "";
+            new QRCode(document.getElementById("qrcode"), { text: `${baseUrl}/aluno.html`, width: 128, height: 128 });
+        }
+
         socket.on('sala_criada', (codigo) => {
             codigoSala = codigo;
-            sessionStorage.setItem('gitwil_sala_ativa', codigo);
+            sessionStorage.setItem('gitwil-sala-codigo', codigo);
             document.getElementById('tela-inicio').style.display = 'none';
             document.getElementById('tela-sala').style.display = 'block';
             document.getElementById('display-codigo').innerText = codigo;
-            document.getElementById("qrcode").innerHTML = "";
-            const baseUrl = `${window.location.protocol}//${window.location.host}`;
-            new QRCode(document.getElementById("qrcode"), { text: `${baseUrl}/`, width: 128, height: 128 });
+            gerarQRCode();
             iniciarGrafico();
             atualizarConfig();
             document.getElementById('input-codigo-manual').value = '';
@@ -470,11 +540,16 @@
         // --- CORES ---
         function gerarInputsDeCor(qtd, labels) {
             const container = document.getElementById('container-cores');
-            container.innerHTML = ''; 
+            container.innerHTML = '';
             for(let i=0; i<qtd; i++) {
                 const corAtual = currentColors[i] || DEFAULT_PALETTE[i];
                 const letrasRef = ['A', 'B', 'C', 'D', 'E', 'Não sei'];
                 const letra = labels ? labels[i] : letrasRef[i];
+
+                // Grupo: color picker + botão texto
+                const group = document.createElement('div');
+                group.style.cssText = 'display:flex; flex-direction:column; align-items:center; gap:4px;';
+
                 const wrapper = document.createElement('div');
                 wrapper.className = 'color-wrapper';
                 wrapper.title = `Mudar cor ${letra}`;
@@ -482,10 +557,33 @@
                 input.type = 'color'; input.value = corAtual;
                 input.oninput = (e) => atualizarCorGrafico(i, e.target.value);
                 const label = document.createElement('span');
-                label.className = 'color-label'; label.innerText = letra[0]; 
+                label.className = 'color-label'; label.innerText = letra[0];
                 wrapper.appendChild(input); wrapper.appendChild(label);
-                container.appendChild(wrapper);
+
+                // Botão toggle claro/escuro
+                const btn = document.createElement('button');
+                btn.id = `btn-texto-cor-${i}`;
+                btn.title = `Cor do texto ${letra}`;
+                btn.style.cssText = 'width:35px; height:20px; border-radius:10px; border:2px solid var(--border-color); cursor:pointer; font-size:10px; font-weight:800; padding:0; line-height:1; transition:all 0.2s;';
+                const isClaro = labelColors[i] === '#ffffff';
+                btn.style.background = isClaro ? '#ffffff' : '#1a1a2e';
+                btn.style.color = isClaro ? '#1a1a2e' : '#ffffff';
+                btn.innerText = 'B';
+                btn.onclick = () => alternarCorTexto(i);
+
+                group.appendChild(wrapper);
+                group.appendChild(btn);
+                container.appendChild(group);
             }
+        }
+
+        function alternarCorTexto(index) {
+            labelColors[index] = labelColors[index] === '#ffffff' ? '#1a1a2e' : '#ffffff';
+            const btn = document.getElementById(`btn-texto-cor-${index}`);
+            const isClaro = labelColors[index] === '#ffffff';
+            btn.style.background = isClaro ? '#ffffff' : '#1a1a2e';
+            btn.style.color = isClaro ? '#1a1a2e' : '#ffffff';
+            if (chartInstance) chartInstance.update();
         }
 
         function atualizarCorGrafico(index, novaCor) {
@@ -498,9 +596,14 @@
             }
         }
 
+        function salvarPaletaPersonalizada() {
+            localStorage.setItem('gitwil-palette', JSON.stringify(currentColors));
+        }
+
         function resetarCores() {
-            // 1. Restaura cores
-            currentColors = [...DEFAULT_PALETTE];
+            // 1. Restaura cores (usa paleta salva pelo professor, ou a padrão se não houver)
+            const paletaSalva = JSON.parse(localStorage.getItem('gitwil-palette'));
+            currentColors = paletaSalva ? [...paletaSalva] : [...DEFAULT_PALETTE];
             
             // 2. Restaura tipo de gráfico para pizza
             chartType = 'pie';
@@ -520,11 +623,21 @@
             // 6. Restaura tipo de pergunta para múltipla escolha
             document.getElementById('tipo-pergunta').value = 'multipla_escolha';
             
-            // 7. Atualiza tudo (cores, gráfico, visibilidade e notifica alunos)
-            atualizarConfig();
+            // 7. Atualiza interface localmente sem notificar o servidor (evita reset dos votos)
+            atualizarConfig(true);
+
+            // 8. Reaplica os votos atuais para não perder os dados da votação em andamento
+            if (chartInstance && Object.values(dadosAtuais).some(val => val > 0)) {
+                chartInstance.data.labels = Object.keys(dadosAtuais);
+                chartInstance.data.datasets[0].data = Object.values(dadosAtuais);
+                const qtd = Object.keys(dadosAtuais).length;
+                chartInstance.data.datasets[0].backgroundColor = currentColors.slice(0, qtd);
+                chartInstance.data.datasets[0].pointBackgroundColor = currentColors.slice(0, qtd);
+                chartInstance.update();
+            }
         }
 
-        function atualizarConfig() {
+        function atualizarConfig(skipEmit = false) {
             const tipo = document.getElementById('tipo-pergunta').value;
             let qtd = parseInt(document.getElementById('qtd-opcoes').value);
             const modo = document.getElementById('modo-selecao').value;
@@ -558,12 +671,14 @@
                 gerarInputsDeCor(qtd);
             }
 
-            if(chartInstance && tipo !== 'discursiva') {
-                chartInstance.destroy();
-                iniciarGrafico(); 
+            if (tipo !== 'discursiva') {
+                if (chartInstance) chartInstance.destroy();
+                iniciarGrafico();
             }
 
-            socket.emit('alterar_config', { codigo: codigoSala, novaConfig: { tipoPergunta: tipo, qtdOpcoes: qtd, modoSelecao: modo } });
+            if (!skipEmit) {
+                socket.emit('alterar_config', { codigo: codigoSala, novaConfig: { tipoPergunta: tipo, qtdOpcoes: qtd, modoSelecao: modo } });
+            }
         }
 
         socket.on('atualizar_discursivas', (respostas) => {
@@ -592,12 +707,13 @@
 
         function iniciarGrafico() {
             const ctx = document.getElementById('meuGrafico').getContext('2d');
-            const textColor = isLight ? '#212529' : '#ffffff';
+            const textColor = isLight ? '#1a1a2e' : '#ffffff';
             const gridColor = isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)';
+            const chartFont = { family: "'Poppins', 'Nunito', sans-serif", weight: '800' };
 
             const tipoPergunta = document.getElementById('tipo-pergunta').value;
             const qtdOpcoes = parseInt(document.getElementById('qtd-opcoes').value);
-            
+
             let labels = [];
             let initialData = [];
 
@@ -612,24 +728,26 @@
                 }
             }
 
-
             let scalesConfig = {};
             if (chartType === 'bar' || chartType === 'line') {
                 scalesConfig = {
-                    y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor, font: { size: 18, weight: 'bold' } } }, 
-                    x: { grid: { display: (chartType !== 'bar') }, ticks: { color: textColor, font: { size: 18, weight: 'bold' } } } 
+                    y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor, font: { ...chartFont, size: 18 } } },
+                    x: { grid: { display: (chartType !== 'bar') }, ticks: { color: textColor, font: { ...chartFont, size: 18 } } }
                 };
             } else if (chartType === 'polarArea' || chartType === 'radar') {
                 scalesConfig = {
                     r: {
                         grid: { color: gridColor },
-                        ticks: { backdropColor: 'transparent', color: isLight ? '#666' : '#aaa', font: { size: 16, weight: 'bold' } },
-                        pointLabels: { color: textColor, font: { size: 18, weight: 'bold' } }
+                        ticks: { backdropColor: 'transparent', color: textColor, font: { ...chartFont, size: 16 } },
+                        pointLabels: { color: textColor, font: { ...chartFont, size: 20 } }
                     }
                 };
             } else {
                 scalesConfig = { x: { display: false }, y: { display: false } };
             }
+
+            const labelAlign = (chartType === 'line') ? 'top' : (chartType === 'bar') ? 'end' : 'center';
+            const labelAnchor = (chartType === 'line' || chartType === 'bar') ? 'end' : 'center';
 
             chartInstance = new Chart(ctx, {
                 type: chartType,
@@ -648,30 +766,24 @@
                         fill: (chartType === 'radar'),
                     }]
                 },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
-                    plugins: { 
-                        legend: { 
-                            display: (chartType !== 'bar' && chartType !== 'line'), 
-                            labels: { 
-                                color: textColor, 
-                                font: { size: 20, weight: 'bold' } // FONTE DA LEGENDA AUMENTADA
-                            } 
-                        },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: (chartType !== 'bar' && chartType !== 'line'), position: 'left', labels: { color: textColor, font: { ...chartFont, size: 20 }, usePointStyle: true, pointStyle: 'circle' } },
                         datalabels: {
                             display: function(context) {
                                 return document.getElementById('show-labels').checked && context.dataset.data[context.dataIndex] > 0;
                             },
-                            color: (chartType === 'line' || chartType === 'radar') ? textColor : '#fff',
-                            align: (chartType === 'line') ? 'top' : 'center',
-                            anchor: (chartType === 'line') ? 'end' : 'center',
-                            font: { weight: 'bold', size: 26 }, // FONTE DOS NÚMEROS AUMENTADA
+                            color: function(context) { return labelColors[context.dataIndex] || '#ffffff'; },
+                            align: labelAlign,
+                            anchor: labelAnchor,
+                            font: { ...chartFont, size: 26 },
                             formatter: function(value, context) {
                                 const tipo = document.getElementById('tipo-dados').value;
                                 let sum = 0;
                                 context.chart.data.datasets[0].data.forEach(d => { sum += d; });
-                                
+
                                 if (tipo === 'porcentagem') {
                                     if (sum === 0) return "0%";
                                     return (value * 100 / sum).toFixed(1) + "%";
@@ -684,7 +796,7 @@
                             }
                         }
                     },
-                    scales: scalesConfig // Vamos ajustar o scalesConfig logo acima dessa declaração
+                    scales: scalesConfig
                 }
             });
         }
@@ -705,11 +817,11 @@
             }
         }
 
-        function resetarSala() { if(confirm("Zerar votos?")) socket.emit('resetar_sala', codigoSala); }
+        function resetarSala() { socket.emit('resetar_sala', codigoSala); }
         function encerrarSessao() {
             if(confirm("Encerrar sala e desconectar todos os alunos?")) {
-                sessionStorage.removeItem('gitwil_sala_ativa');
                 socket.emit('encerrar_sala', codigoSala);
+                sessionStorage.removeItem('gitwil-sala-codigo');
                 document.getElementById('tela-sala').style.display = 'none';
                 document.getElementById('tela-inicio').style.display = 'block';
                 codigoSala = ''; dadosAtuais = { A:0, B:0, C:0, D:0 };
@@ -717,18 +829,15 @@
             }
         }
 
-async function copiarGrafico() {
+        async function copiarGrafico() {
             const canvasOriginal = document.getElementById('meuGrafico');
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = canvasOriginal.width;
             tempCanvas.height = canvasOriginal.height;
             const tempCtx = tempCanvas.getContext('2d');
-            
-            // Fundo branco
             tempCtx.fillStyle = '#ffffff';
             tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-            
-            // Força todas as fontes para preto antes de copiar
+            const oldTextColor = Chart.defaults.color;
             if(chartInstance.options.scales.x) chartInstance.options.scales.x.ticks.color = '#000000';
             if(chartInstance.options.scales.y) chartInstance.options.scales.y.ticks.color = '#000000';
             if(chartInstance.options.scales.r) {
@@ -736,41 +845,25 @@ async function copiarGrafico() {
                 chartInstance.options.scales.r.ticks.color = '#000000';
             }
             if (chartInstance.options.plugins.legend) chartInstance.options.plugins.legend.labels.color = '#000000';
-            
-            // NOVA LINHA: Força os números de dentro do gráfico (datalabels) para preto
-            if (chartInstance.options.plugins.datalabels) chartInstance.options.plugins.datalabels.color = '#000000';
-            
             chartInstance.update();
             tempCtx.drawImage(canvasOriginal, 0, 0);
-            
-            // Restaura o tema original
             updateChartTheme();
-            
-            // NOVA LINHA: Restaura a cor dos números baseada no tipo de gráfico
-            if (chartInstance.options.plugins.datalabels) {
-                chartInstance.options.plugins.datalabels.color = (chartType === 'line' || chartType === 'radar') ? Chart.defaults.color : '#fff';
-            }
-            chartInstance.update();
-
-            // Salva no clipboard ou faz download
             tempCanvas.toBlob(async (blob) => {
                 try {
                     const item = new ClipboardItem({ "image/png": blob });
                     await navigator.clipboard.write([item]);
-                    alert("Gráfico copiado!");
                 } catch (err) {
                     const link = document.createElement('a');
                     link.href = URL.createObjectURL(blob);
                     link.download = `GitWil_Grafico_${codigoSala}.png`;
                     link.click();
-                    alert("Gráfico baixado!");
                 }
             });
         }
 
         async function copiarQRCode() {
             const img = document.querySelector("#qrcode img");
-            if (!img) return alert("QR Code não disponível");
+            if (!img) return;
             try {
                 const canvas = document.createElement('canvas');
                 canvas.width = img.naturalWidth;
@@ -783,7 +876,6 @@ async function copiarGrafico() {
                     try {
                         const item = new ClipboardItem({ "image/png": blob });
                         await navigator.clipboard.write([item]);
-                        alert("QR Code copiado para a área de transferência!");
                     } catch (securityError) {
                         console.warn("Clipboard bloqueado (Contexto Inseguro). Iniciando download.");
                         const link = document.createElement('a');
@@ -792,17 +884,16 @@ async function copiarGrafico() {
                         document.body.appendChild(link);
                         link.click();
                         document.body.removeChild(link);
-                        alert("O navegador bloqueou a cópia direta (segurança). O QR Code foi baixado!");
                     }
                 }, 'image/png');
             } catch (err) {
                 console.error(err);
-                alert("Erro ao processar QR Code.");
             }
         }
 
         socket.on('atualizar_grafico', (votos) => {
             dadosAtuais = votos;
+            if (!chartInstance) return;
             chartInstance.data.labels = Object.keys(votos);
             chartInstance.data.datasets[0].data = Object.values(votos);
             const qtd = Object.keys(votos).length;
@@ -812,15 +903,6 @@ async function copiarGrafico() {
             document.getElementById('total-votos').innerText = total;
             chartInstance.update();
         });
-
-        window.addEventListener('DOMContentLoaded', () => {
-            const salaSalva = sessionStorage.getItem('gitwil_sala_ativa');
-            if (salaSalva) {
-                socket.emit('recuperar_sala_professor', salaSalva);
-            }
-        });
-
-
     </script>
 </body>
 </html>
