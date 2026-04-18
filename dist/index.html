@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>GitWil - Quiz Interativo</title>
+  <meta name="description" content="GitWil é uma plataforma gratuita de quiz interativo em tempo real. Crie salas, envie perguntas e acompanhe as respostas dos alunos instantaneamente.">
+  <meta name="keywords" content="quiz interativo, quiz sala de aula, quiz tempo real, gitwil, plataforma educacional, quiz online, resposta ao vivo">
+  <meta name="author" content="GitWil">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://gitwil.com.br/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="GitWil - Quiz Interativo em Tempo Real">
+  <meta property="og:description" content="Crie salas de quiz, envie perguntas e veja as respostas dos alunos em tempo real. Gratuito e sem cadastro.">
+  <meta property="og:url" content="https://gitwil.com.br/">
+  <meta property="og:site_name" content="GitWil">
+  <meta property="og:locale" content="pt_BR">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="GitWil - Quiz Interativo em Tempo Real">
+  <meta name="twitter:description" content="Plataforma de quiz interativo para sala de aula. Respostas em tempo real.">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="./assets/apple-touch-icon-Ck46EvPz.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32x32-D6VyuQ9w.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="./assets/favicon-16x16-26Ty9ZxR.png">
+  <link rel="manifest" href="./assets/site-BwHFeIBa.webmanifest">
+
+  <link href="https://fonts.googleapis.com" rel="preconnect">
+  <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&family=Inter:wght@100;200;300;400;500;600;700;800;900&family=Nunito:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <style>
+    .theme-toggle-fixed {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 100;
+    }
+    .admin-overlay, .social-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    .admin-overlay.show, .social-overlay.show {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .admin-modal, .social-modal {
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 35px 30px;
+      width: 90%;
+      max-width: 380px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+      transform: scale(0.9) translateY(20px);
+      transition: transform 0.4s ease;
+    }
+    .admin-overlay.show .admin-modal,
+    .social-overlay.show .social-modal {
+      transform: scale(1) translateY(0);
+    }
+    .admin-modal h4, .social-modal h4 {
+      font-weight: 800;
+      margin-bottom: 6px;
+      color: var(--text-primary);
+    }
+    .admin-modal .admin-subtitle, .social-modal .social-subtitle {
+      font-size: 0.85rem;
+      color: var(--text-secondary, #aaa);
+      margin-bottom: 24px;
+    }
+    .admin-modal .form-control {
+      border-radius: 12px;
+      padding: 12px 16px;
+      border: 2px solid var(--border-color);
+      background: var(--bg-color);
+      color: var(--text-primary);
+      font-family: 'Nunito', sans-serif;
+      font-weight: 600;
+      transition: border-color 0.3s;
+    }
+    .admin-modal .form-control:focus {
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px rgba(var(--accent-rgb, 13,110,253), 0.12);
+    }
+    .admin-modal .form-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-secondary, #aaa);
+    }
+    .btn-admin-login {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 12px;
+      background: var(--accent-color);
+      color: #fff;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 800;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn-admin-login:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 14px rgba(var(--accent-rgb, 13,110,253), 0.3);
+    }
+    .btn-admin-close, .btn-social-close {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid var(--border-color);
+      border-radius: 12px;
+      background: transparent;
+      color: var(--text-secondary, #aaa);
+      font-family: 'Nunito', sans-serif;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: border-color 0.3s, color 0.3s;
+    }
+    .btn-admin-close:hover, .btn-social-close:hover {
+      border-color: var(--text-primary);
+      color: var(--text-primary);
+    }
+    .admin-error {
+      text-align: center;
+      color: #dc3545;
+      font-weight: 600;
+      font-size: 0.85rem;
+      margin-top: 10px;
+      display: none;
+    }
+    .logo-tap-area {
+      cursor: default;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    /* --- RODAPÉ --- */
+    .footer-copyright {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      padding: 12px 0;
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.8rem;
+      color: var(--text-secondary, #aaa);
+      z-index: 50;
+    }
+    .footer-copyright .footer-name {
+      font-weight: 700;
+      color: var(--accent-color);
+      cursor: pointer;
+      transition: opacity 0.3s;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .footer-copyright .footer-name:hover {
+      opacity: 0.7;
+    }
+
+    /* --- POP-UP REDES SOCIAIS --- */
+    .social-links {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .social-link-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 20px;
+      border-radius: 14px;
+      border: 2px solid var(--border-color);
+      background: transparent;
+      color: var(--text-primary);
+      font-family: 'Nunito', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      flex: 1;
+      justify-content: center;
+    }
+    .social-link-btn i {
+      font-size: 1.4rem;
+    }
+    .social-link-btn.youtube {
+      border-color: rgba(255, 0, 0, 0.3);
+    }
+    .social-link-btn.youtube:hover {
+      background: rgba(255, 0, 0, 0.1);
+      border-color: #ff0000;
+      color: #ff0000;
+    }
+    .social-link-btn.linkedin {
+      border-color: rgba(10, 102, 194, 0.3);
+    }
+    .social-link-btn.linkedin:hover {
+      background: rgba(10, 102, 194, 0.1);
+      border-color: #0a66c2;
+      color: #0a66c2;
+    }
+  </style>
+  <link rel="stylesheet" crossorigin href="./assets/main-DrdrLrTM.css">
+</head>
+
+<body class="mobile-body d-flex flex-column justify-content-center align-items-center min-vh-100">
+
+  <!-- Botão de tema fixo no canto superior direito -->
+  <div class="theme-toggle-fixed">
+    <button type="button" class="btn-theme" id="themeBtn" aria-label="Alternar Tema">
+      <div class="icon-wrapper">
+        <i class="bi bi-moon-stars-fill icon-moon"></i>
+        <i class="bi bi-sun-fill icon-sun"></i>
+      </div>
+    </button>
+  </div>
+
+  <main class="text-center px-3 w-100">
+
+    <div class="mb-5 transition-element">
+
+      <div class="logo-container mb-4 logo-tap-area" id="logo-tap-area">
+        <img src="./assets/dark-sQfrTUMD.png" alt="Logo Dark" class="theme-logo logo-dark">
+        <img src="./assets/light-FLU5VyoT.png" alt="Logo Light" class="theme-logo logo-light">
+      </div>
+
+      <h1 class="sitename display-3 fw-bold">GitWil</h1>
+      <p class="subtitle fs-5">Insira o código da sala</p>
+    </div>
+
+    <div class="d-flex justify-content-center position-relative" style="z-index: 10;">
+      <div class="input-animation-wrapper">
+        <input class="c-checkbox" type="checkbox" id="checkbox">
+        <div class="c-formContainer">
+          <form class="c-form" onsubmit="event.preventDefault(); irParaSala();">
+            <input class="c-form__input" id="input-codigo-home" placeholder="• • • •" type="text" maxlength="10" pattern="\d*" inputmode="numeric" required>
+            <div class="c-form__buttonLabel">
+              <button class="c-form__button" type="button" onclick="irParaSala()" style="font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 1.1rem;">Entrar</button>
+            </div>
+            <label class="c-form__toggle" for="checkbox" data-title="Código"></label>
+          </form>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Rodapé com Copyright -->
+  <footer class="footer-copyright">
+    © 2026 <span class="footer-name" id="footer-name">Professor Wilson Amaral</span>
+  </footer>
+
+  <!-- Overlay Admin oculto -->
+  <div class="admin-overlay" id="admin-overlay">
+    <div class="admin-modal">
+      <h4 class="text-center"><i class="bi bi-shield-lock-fill me-2" style="color: var(--accent-color);"></i>Acesso Restrito</h4>
+      <p class="admin-subtitle text-center">Painel administrativo</p>
+      <form onsubmit="event.preventDefault(); loginAdmin();">
+        <div class="mb-3">
+          <label class="form-label">Usuário</label>
+          <input type="text" class="form-control" id="admin-user" placeholder="Usuário" required>
+        </div>
+        <div class="mb-4">
+          <label class="form-label">Senha</label>
+          <input type="password" class="form-control" id="admin-pass" placeholder="••••••" required>
+        </div>
+        <button type="submit" class="btn-admin-login mb-2">
+          <i class="bi bi-box-arrow-in-right me-2"></i>ACESSAR
+        </button>
+        <button type="button" class="btn-admin-close" onclick="fecharAdmin()">CANCELAR</button>
+      </form>
+      <p class="admin-error" id="admin-error">Credenciais inválidas</p>
+    </div>
+  </div>
+
+  <!-- Overlay Redes Sociais -->
+  <div class="social-overlay" id="social-overlay">
+    <div class="social-modal">
+      <h4 class="text-center"><i class="fa-solid fa-chalkboard-user me-2" style="color: var(--accent-color);"></i>Professor Wilson Amaral</h4>
+      <p class="social-subtitle text-center">Conheça minhas redes sociais</p>
+      <div class="social-links">
+        <a href="https://www.youtube.com/@ProfessorWilsonAmaral" target="_blank" class="social-link-btn youtube">
+          <i class="fa-brands fa-youtube"></i> YouTube
+        </a>
+        <a href="https://www.linkedin.com/in/professorwilsonamaral/" target="_blank" class="social-link-btn linkedin">
+          <i class="fa-brands fa-linkedin"></i> LinkedIn
+        </a>
+      </div>
+      <button type="button" class="btn-social-close" onclick="fecharSocial()">FECHAR</button>
+      <p class="text-center text-muted mt-3" style="font-size: 0.75rem;">Sistema desenvolvido por João Paulo Manzioli Silva</p>
+    </div>
+  </div>
+
+  <script>
+    window.GITWIL_CONFIG = (() => {
+      const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const apiUrl = isLocalHost
+        ? 'http://localhost:3000'
+        : 'https://gitwil-api-production.up.railway.app';
+
+      return {
+        apiUrl,
+        routes: {
+          home: new URL('./index.html', window.location.href).href,
+          aluno: new URL('./aluno.html', window.location.href).href,
+          professor: new URL('./professor.html', window.location.href).href,
+        }
+      };
+    })();
+
+    const apiUrl = window.GITWIL_CONFIG.apiUrl;
+    const routes = window.GITWIL_CONFIG.routes;
+    // --- Lógica de Input (original) ---
+    function irParaSala() {
+      const input = document.getElementById('input-codigo-home');
+      const codigo = input.value;
+      if (codigo && codigo.length >= 3) {
+        const destino = new URL(routes.aluno);
+        destino.searchParams.set('codigo', codigo);
+        window.location.href = destino.href;
+      } else {
+        input.style.color = "#ff6b6b"; 
+        setTimeout(() => input.style.color = "var(--accent-color)", 1000);
+      }
+    }
+    document.getElementById("input-codigo-home").addEventListener("keypress", function(e) {
+      if (e.key === "Enter") { e.preventDefault(); irParaSala(); }
+    });
+
+    // --- Lógica de Tema (Persistente) ---
+    const btnTheme = document.getElementById('themeBtn');
+    const body = document.body;
+    const savedTheme = localStorage.getItem('gitwil-theme');
+    let isLight = savedTheme === 'light';
+
+    if (isLight) {
+      body.classList.add('light-mode');
+      btnTheme.classList.add('active');
+    }
+
+    setTimeout(() => { document.body.classList.add('theme-ready'); }, 100);
+
+
+    btnTheme.addEventListener('click', () => {
+      isLight = !isLight;
+      if (isLight) {
+        body.classList.add('light-mode');
+        btnTheme.classList.add('active');
+        localStorage.setItem('gitwil-theme', 'light');
+      } else {
+        body.classList.remove('light-mode');
+        btnTheme.classList.remove('active');
+        localStorage.setItem('gitwil-theme', 'dark');
+      }
+    });
+
+    // --- Acesso Admin Secreto: 5 cliques no logo ---
+    let logoTapCount = 0;
+    let logoTapTimer = null;
+
+    document.getElementById('logo-tap-area').addEventListener('click', () => {
+      logoTapCount++;
+      clearTimeout(logoTapTimer);
+      logoTapTimer = setTimeout(() => { logoTapCount = 0; }, 500);
+      if (logoTapCount >= 5) {
+        logoTapCount = 0;
+        abrirAdmin();
+      }
+    });
+
+    function abrirAdmin() {
+      document.getElementById('admin-overlay').classList.add('show');
+      document.getElementById('admin-error').style.display = 'none';
+      document.getElementById('admin-user').value = '';
+      document.getElementById('admin-pass').value = '';
+      setTimeout(() => { document.getElementById('admin-user').focus(); }, 400);
+    }
+
+    function fecharAdmin() {
+      document.getElementById('admin-overlay').classList.remove('show');
+    }
+
+    document.getElementById('admin-overlay').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('admin-overlay')) fecharAdmin();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        fecharAdmin();
+        fecharSocial();
+      }
+    });
+
+    document.getElementById('footer-name').addEventListener('click', () => {
+      abrirSocial();
+    });
+
+    function abrirSocial() {
+      document.getElementById('social-overlay').classList.add('show');
+    }
+
+    function fecharSocial() {
+      document.getElementById('social-overlay').classList.remove('show');
+    }
+
+    document.getElementById('social-overlay').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('social-overlay')) fecharSocial();
+    });
+
+    // --- Login Admin ---
+    async function loginAdmin() {
+      const user = document.getElementById('admin-user').value;
+      const pass = document.getElementById('admin-pass').value;
+      const errorEl = document.getElementById('admin-error');
+      errorEl.style.display = 'none';
+
+      try {
+        const resposta = await fetch(apiUrl + '/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario: user, senha: pass })
+        });
+        const dados = await resposta.json();
+        if (dados.sucesso) {
+          sessionStorage.setItem('gitwil-admin-auth', 'true');
+          window.location.href = routes.professor;
+        } else {
+          errorEl.innerText = 'Usuário ou senha incorretos';
+          errorEl.style.display = 'block';
+        }
+      } catch (e) {
+        errorEl.innerText = 'Erro de conexão com o servidor';
+        errorEl.style.display = 'block';
+      }
+    }
+  </script>
+
+</body>
+</html>

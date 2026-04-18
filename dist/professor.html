@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Painel do Professor | GitWil - Quiz Interativo</title>
+    <meta name="description" content="Painel de controle do professor. Crie salas, configure perguntas e acompanhe respostas em tempo real.">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="canonical" href="https://gitwil.com.br/professor.html">
+    
+
+    
+    <link href="https://fonts.googleapis.com" rel="preconnect">
+    <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Poppins:wght@700;800;900&display=swap" rel="stylesheet">
+    
+
+    <link rel="apple-touch-icon" sizes="180x180" href="./assets/apple-touch-icon-Ck46EvPz.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32x32-D6VyuQ9w.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="./assets/favicon-16x16-26Ty9ZxR.png">
+    <link rel="manifest" href="./assets/site-BwHFeIBa.webmanifest">
+
+    <link rel="icon" type="image/png" sizes="32x32" href="./assets/light-FLU5VyoT.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="./assets/dark-sQfrTUMD.png" media="(prefers-color-scheme: dark)">
+    <link rel="apple-touch-icon" href="./assets/dark-sQfrTUMD.png">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <style>
+        #qrcode img { border: 5px solid white; border-radius: 10px; margin: 0 auto; }
+        canvas { width: 100% !important; height: 100% !important; }
+        
+        .color-group { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 15px; }
+        .color-wrapper {
+            position: relative; width: 35px; height: 35px; border-radius: 50%;
+            overflow: hidden; border: 2px solid var(--border-color);
+            transition: transform 0.2s; cursor: pointer;
+        }
+        .color-wrapper:hover { transform: scale(1.1); border-color: var(--text-primary); }
+        .color-wrapper input[type="color"] {
+            position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            padding: 0; margin: 0; cursor: pointer; border: none;
+        }
+        .color-label {
+            position: absolute; width: 100%; height: 100%; pointer-events: none;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 10px; font-weight: bold; color: rgba(255,255,255,0.8);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+        .chart-controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+
+        /* --- MAGIC CARDS --- */
+        #area-postits {
+            width: 100%; height: 100%; min-height: 400px;
+            overflow-y: auto; padding: 20px;
+        }
+        .post-it-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 30px;
+        }
+        .post-it-card {
+            --dynamic-color: var(--accent-color); 
+            width: 100%; min-height: 180px; padding: 3px;
+            border-radius: 1rem; position: relative; z-index: 1;
+            background: var(--dynamic-color); 
+            transition: transform 0.3s ease;
+        }
+        .post-it-card::after {
+            position: absolute; content: "";
+            top: 20px; left: 0; right: 0; z-index: -1;
+            height: 100%; width: 100%;
+            transform: scale(0.9); filter: blur(25px);
+            background: var(--dynamic-color);
+            opacity: 0.4; transition: opacity 0.5s ease;
+        }
+        .post-it-content {
+            background: var(--surface-color);
+            color: var(--text-primary);
+            width: 100%; height: 100%;
+            border-radius: 0.8rem;
+            display: flex; justify-content: center; align-items: center;
+            padding: 20px; text-align: center;
+            font-family: var(--default-font); font-weight: 600; font-size: 1.1rem;
+            word-wrap: break-word; overflow-wrap: break-word;
+        }
+        .post-it-card:hover { transform: translateY(-5px); }
+        .post-it-card:hover::after { opacity: 0.8; }
+        .disabled-section { opacity: 0.4; pointer-events: none; filter: grayscale(1); }
+
+        /* --- CRIAÇÃO DE SALA --- */
+        .modo-codigo-btn {
+            flex: 1; padding: 12px 8px; border: 2px solid var(--border-color);
+            border-radius: 12px; background: transparent; color: var(--text-primary);
+            cursor: pointer; transition: all 0.3s ease; text-align: center;
+            font-family: var(--default-font); font-weight: 600; font-size: 0.85rem;
+        }
+        .modo-codigo-btn:hover { border-color: var(--accent-color); background: rgba(var(--accent-rgb, 13,110,253), 0.05); }
+        .modo-codigo-btn.active {
+            border-color: var(--accent-color); background: var(--accent-color);
+            color: #fff; box-shadow: 0 4px 12px rgba(var(--accent-rgb, 13,110,253), 0.3);
+        }
+        .modo-codigo-btn i { display: block; font-size: 1.5rem; margin-bottom: 4px; }
+        .campo-codigo-manual {
+            font-size: 1.8rem; font-weight: 800; text-align: center;
+            letter-spacing: 0.5rem; padding: 12px; border-radius: 12px;
+            border: 2px dashed var(--border-color); background: transparent;
+            color: var(--text-primary); width: 100%; font-family: var(--default-font);
+            transition: border-color 0.3s;
+        }
+        .campo-codigo-manual:focus { outline: none; border-color: var(--accent-color); }
+        .campo-codigo-manual::placeholder { letter-spacing: 0.3rem; font-size: 1rem; font-weight: 400; opacity: 0.4; }
+        .slider-digitos { width: 100%; accent-color: var(--accent-color); cursor: pointer; }
+        .badge-digitos {
+            display: inline-flex; align-items: center; justify-content: center;
+            background: var(--accent-color); color: #fff; font-weight: 800;
+            width: 36px; height: 36px; border-radius: 50%; font-size: 1.1rem;
+        }
+        .preview-codigo {
+            font-size: 2rem; font-weight: 800; letter-spacing: 0.4rem;
+            color: var(--accent-color); text-align: center; padding: 10px 0;
+            font-family: var(--default-font); opacity: 0.5;
+        }
+        #msg-erro-sala {
+            display: none; margin-top: 10px; padding: 10px 15px;
+            border-radius: 10px; background: rgba(220, 53, 69, 0.1);
+            border: 1px solid rgba(220, 53, 69, 0.3); color: #dc3545;
+            font-weight: 600; font-size: 0.9rem; text-align: center;
+        }
+    </style>
+
+    <!-- Proteção: redireciona se não autenticado -->
+    <script>
+        if (sessionStorage.getItem('gitwil-admin-auth') !== 'true') {
+            window.location.href = './index.html';
+        }
+    </script>
+  <link rel="stylesheet" crossorigin href="./assets/main-DrdrLrTM.css">
+</head>
+<body>
+
+    <div id="dashboard" class="container py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="sitename m-0">Painel de Controle</h2>
+                <p class="text-muted m-0">Gerencie sua sala de aula interativa</p>
+            </div>
+            <button class="btn-theme" style="width:50px; height:50px;" id="themeBtn">
+                <div class="icon-wrapper" style="width:24px; height:24px;">
+                    <i class="bi bi-moon-stars-fill icon-moon" style="font-size:1.2rem; line-height:24px;"></i>
+                    <i class="bi bi-sun-fill icon-sun" style="font-size:1.2rem; line-height:24px;"></i>
+                </div>
+            </button>
+        </div>
+
+        <!-- ===== TELA INICIAL: Criar Sala ===== -->
+        <div id="tela-inicio" class="text-center py-4 painel-card">
+            <i class="bi bi-person-workspace display-1" style="color: var(--accent-color);"></i>
+            <h3 class="mt-3">Criar Nova Sessão</h3>
+            <p class="text-muted mb-4">Configure o código da sala antes de iniciar.</p>
+
+            <!-- Seletor de Modo -->
+            <div class="d-flex gap-3 justify-content-center mb-4" style="max-width: 500px; margin: 0 auto;">
+                <button class="modo-codigo-btn active" id="btn-modo-aleatorio" onclick="selecionarModo('aleatorio')">
+                    <i class="bi bi-shuffle"></i> Aleatório
+                </button>
+                <button class="modo-codigo-btn" id="btn-modo-manual" onclick="selecionarModo('manual')">
+                    <i class="bi bi-keyboard"></i> Manual
+                </button>
+            </div>
+
+            <!-- Painel Modo Aleatório -->
+            <div id="painel-aleatorio" style="max-width: 500px; margin: 0 auto;">
+                <label class="form-label text-muted small fw-bold">QUANTIDADE DE DÍGITOS</label>
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <span class="text-muted small fw-bold">3</span>
+                    <input type="range" class="slider-digitos" id="slider-digitos" min="3" max="10" value="6" oninput="atualizarPreview()">
+                    <span class="text-muted small fw-bold">10</span>
+                    <span class="badge-digitos" id="badge-digitos-valor">6</span>
+                </div>
+                <div class="preview-codigo" id="preview-aleatorio">••••••</div>
+                <p class="text-muted small">O código será gerado aleatoriamente com <strong id="txt-qtd-digitos">6</strong> dígitos</p>
+            </div>
+
+            <!-- Painel Modo Manual -->
+            <div id="painel-manual" style="max-width: 500px; margin: 0 auto; display: none;">
+                <label class="form-label text-muted small fw-bold">DIGITE O CÓDIGO DA SALA</label>
+                <input type="text" class="campo-codigo-manual" id="input-codigo-manual" 
+                       placeholder="Ex: 123456" maxlength="10" 
+                       oninput="validarCodigoManual(this)">
+                <p class="text-muted small mt-2">Apenas números, entre 3 e 10 dígitos</p>
+            </div>
+
+            <!-- Mensagem de Erro -->
+            <div id="msg-erro-sala"></div>
+
+            <!-- Botão Criar -->
+            <button class="btn btn-primary btn-lg mt-3 px-5 fw-bold" onclick="criarSala()" id="btn-criar-sala">
+                <i class="bi bi-play-circle-fill me-2"></i> INICIAR SESSÃO
+            </button>
+
+            <div class="mt-4">
+                <button class="btn btn-sm btn-outline-danger" onclick="fazerLogout()">
+                    <i class="bi bi-box-arrow-right me-1"></i> Sair do Painel
+                </button>
+            </div>
+        </div>
+
+        <!-- ===== TELA DA SALA ATIVA ===== -->
+        <div id="tela-sala" style="display: none;">
+            <div class="row g-4 mb-4">
+                <div class="col-md-8">
+                    <div class="painel-card h-100 d-flex flex-column justify-content-center align-items-center text-center">
+                        <span class="text-muted text-uppercase small fw-bold mb-1">CÓDIGO DE ACESSO</span>
+                        <h1 id="display-codigo" class="display-1 fw-bold m-0" style="color: var(--accent-color); line-height: 1;">---</h1>
+                        <div class="mt-3">
+                            <span class="fs-4 fw-bold" id="total-votos">0</span>
+                            <span class="text-muted">respostas recebidas</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="painel-card h-100 d-flex flex-column align-items-center justify-content-center">
+                        <div id="qrcode" class="mb-3"></div>
+                        <button class="btn btn-qr w-100 fw-bold" onclick="copiarQRCode()">
+                            <i class="bi bi-qr-code-scan me-2"></i> Copiar QR
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <div class="painel-card h-100">
+                        <h5 class="mb-4 border-bottom pb-2" style="border-color: var(--border-color) !important;">
+                            <i class="bi bi-sliders me-2"></i>Controles
+                        </h5>
+                        
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">TIPO DE QUESTÃO</label>
+                            <select id="tipo-pergunta" class="form-select mb-2" onchange="atualizarConfig()">
+                                <option value="multipla_escolha">Múltipla Escolha</option>
+                                <option value="certo_errado">Certo / Errado</option>
+                                <option value="discursiva">Discursiva (Texto)</option>
+                            </select>
+                            
+                            <div id="opcoes-multipla">
+                                <label class="form-label text-muted small fw-bold">QTD. OPÇÕES</label>
+                                <select id="qtd-opcoes" class="form-select mb-2" onchange="atualizarConfig()">
+                                    <option value="2">2 Opções (A-B)</option>
+                                    <option value="3">3 Opções (A-C)</option>
+                                    <option value="4">4 Opções (A-D)</option>
+                                    <option value="5">5 Opções (A-E)</option>
+                                    <option value="6" selected>6 Opções (A-F)</option>
+                                </select>
+                                <select id="modo-selecao" class="form-select" onchange="atualizarConfig()">
+                                    <option value="unica">Única (1 Resposta)</option>
+                                    <option value="multipla">Múltipla (Várias)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="section-colors">
+                            <hr style="border-color: var(--border-color);">
+                            <label class="form-label text-muted small fw-bold">CORES DAS RESPOSTAS</label>
+                            <div id="container-cores" class="color-group"></div>
+                            <div class="d-flex justify-content-between mb-3">
+                                <button class="btn btn-sm btn-link text-decoration-none p-0" onclick="salvarPaletaPersonalizada()">
+                                    <small>Salvar como Padrão</small>
+                                </button>
+                                <button class="btn btn-sm btn-link text-decoration-none p-0" onclick="resetarCores()">
+                                    <small>Restaurar Padrão</small>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="section-charts">
+                            <hr style="border-color: var(--border-color);">
+                            <label class="form-label text-muted small fw-bold">VISUAL DO GRÁFICO</label>
+                            <div class="chart-controls mb-3">
+                                <button class="btn btn-outline-secondary btn-check-custom" id="btn-bar" onclick="mudarGrafico('bar')"><i class="bi bi-bar-chart-fill"></i></button>
+                                <button class="btn btn-outline-secondary btn-check-custom active" id="btn-pie" onclick="mudarGrafico('pie')"><i class="bi bi-pie-chart-fill"></i></button>
+                                <button class="btn btn-outline-secondary btn-check-custom" id="btn-doughnut" onclick="mudarGrafico('doughnut')"><i class="bi bi-circle"></i></button>
+                                <button class="btn btn-outline-secondary btn-check-custom" id="btn-line" onclick="mudarGrafico('line')"><i class="bi bi-graph-up"></i></button>
+                                <button class="btn btn-outline-secondary btn-check-custom" id="btn-polarArea" onclick="mudarGrafico('polarArea')"><i class="bi bi-bullseye"></i></button>
+                                <button class="btn btn-outline-secondary btn-check-custom" id="btn-radar" onclick="mudarGrafico('radar')"><i class="bi bi-hexagon"></i></button>
+                            </div>
+
+                            <div class="bg-light bg-opacity-10 p-3 rounded mb-3">
+                                <label class="form-label text-muted small fw-bold mb-2">DADOS NO GRÁFICO</label>
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" id="show-labels" checked onchange="atualizarLabels()">
+                                    <label class="form-check-label small" for="show-labels">Exibir Valores</label>
+                                </div>
+                                <select id="tipo-dados" class="form-select form-select-sm mb-2" onchange="atualizarLabels()">
+                                    <option value="numero">Numérico (1, 2...)</option>
+                                    <option value="porcentagem" selected>Porcentagem (%)</option>
+                                    <option value="ambos">Ambos</option>
+                                </select>
+                            </div>
+                            
+                            <button class="btn btn-primary w-100 mb-2 fw-bold" onclick="copiarGrafico()">
+                                <i class="bi bi-camera-fill me-2"></i>Copiar Gráfico
+                            </button>
+                        </div>
+
+                        <button class="btn btn-danger w-100 fw-bold mb-3" onclick="resetarSala()">
+                            <i class="bi bi-trash-fill me-2"></i>LIMPAR RESPOSTAS
+                        </button>
+                        <button class="btn btn-outline-danger w-100 fw-bold" onclick="encerrarSessao()">
+                            <i class="bi bi-x-circle me-2"></i>ENCERRAR SESSÃO
+                        </button>
+                    </div>
+                </div>
+
+                <div class="col-lg-8">
+                    <div class="painel-card h-100 d-flex align-items-center justify-content-center">
+                        <div id="area-canvas" style="width:100%; height:450px;">
+                            <canvas id="meuGrafico"></canvas>
+                        </div>
+                        <div id="area-postits" style="display:none;">
+                            <h4 class="text-center text-muted mb-4 fw-bold">Respostas Recebidas</h4>
+                            <div class="post-it-grid" id="grid-respostas">
+                                <div class="text-center w-100 text-muted mt-5 col-span-3">
+                                    Nenhuma resposta recebida ainda.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+    <script>
+        window.GITWIL_CONFIG = (() => {
+            const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const apiUrl = isLocalHost
+                ? 'http://localhost:3000'
+                : 'https://gitwil-api-production.up.railway.app';
+
+            return {
+                apiUrl,
+                routes: {
+                    home: new URL('./index.html', window.location.href).href,
+                    aluno: new URL('./aluno.html', window.location.href).href,
+                    professor: new URL('./professor.html', window.location.href).href
+                }
+            };
+        })();
+
+        const apiUrl = window.GITWIL_CONFIG.apiUrl;
+        const routes = window.GITWIL_CONFIG.routes;
+
+        Chart.register(ChartDataLabels);
+        const DEFAULT_PALETTE = ['#0d6efd', '#08c7f7', '#ffc106', '#198754', '#6610f2', '#fd7e14'];
+        const _savedPalette = JSON.parse(localStorage.getItem('gitwil-palette'));
+        let currentColors = _savedPalette ? [..._savedPalette] : [...DEFAULT_PALETTE];
+        let labelColors = ['#ffffff', '#ffffff', '#ffffff', '#ffffff', '#ffffff', '#ffffff'];
+
+        // --- LOGOUT (agora redireciona para index.html) ---
+        function fazerLogout() {
+            if(confirm("Deseja realmente sair?")) {
+                sessionStorage.removeItem('gitwil-admin-auth');
+                window.location.href = routes.home;
+            }
+        }
+
+        // --- TEMA E GRÁFICO ---
+        const btnTheme = document.getElementById('themeBtn');
+        const body = document.body;
+        let isLight = localStorage.getItem('gitwil-theme') === 'light';
+        if (isLight) { body.classList.add('light-mode'); btnTheme.classList.add('active'); localStorage.setItem('gitwil-theme', 'light'); }
+        setTimeout(() => { document.body.classList.add('theme-ready'); }, 100);
+
+
+        function updateChartTheme() {
+            if (!chartInstance) return;
+            const textColor = isLight ? '#212529' : '#ffffff';
+            const gridColor = isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)';
+            Chart.defaults.color = textColor;
+            Chart.defaults.borderColor = gridColor;
+            
+            if (chartInstance.options.scales.x) {
+                chartInstance.options.scales.x.ticks.color = textColor;
+                chartInstance.options.scales.x.grid.color = gridColor;
+            }
+            if (chartInstance.options.scales.y) {
+                chartInstance.options.scales.y.ticks.color = textColor;
+                chartInstance.options.scales.y.grid.color = gridColor;
+            }
+            if (chartInstance.options.scales.r) {
+                chartInstance.options.scales.r.ticks.color = isLight ? '#666' : '#aaa';
+                chartInstance.options.scales.r.ticks.backdropColor = 'transparent';
+                chartInstance.options.scales.r.grid.color = gridColor;
+                chartInstance.options.scales.r.pointLabels.color = textColor;
+            }
+            chartInstance.update();
+        }
+
+        btnTheme.addEventListener('click', () => {
+            isLight = !isLight;
+            if (isLight) {
+                body.classList.add('light-mode'); btnTheme.classList.add('active'); localStorage.setItem('gitwil-theme', 'light');
+            } else {
+                body.classList.remove('light-mode'); btnTheme.classList.remove('active'); localStorage.setItem('gitwil-theme', 'dark');
+            }
+            updateChartTheme();
+        });
+
+        // --- SOCKET ---
+        const socket = io(apiUrl);
+        let codigoSala = '';
+        let chartInstance = null;
+        let chartType = 'pie';
+        let dadosAtuais = { A:0, B:0, C:0, D:0 };
+        let professorReconectando = false;
+
+        // Reconexão automática ao recarregar (F5) ou reconectar após queda de rede
+        socket.on('connect', () => {
+            const savedCodigo = sessionStorage.getItem('gitwil-sala-codigo');
+            if (savedCodigo) {
+                if (!codigoSala) professorReconectando = true;
+                socket.emit('entrar_sala', { codigo: savedCodigo });
+            }
+        });
+
+        // Restaura painel da sala quando reconectado
+        socket.on('entrada_ok', () => {
+            if (!professorReconectando) return;
+            codigoSala = sessionStorage.getItem('gitwil-sala-codigo');
+            document.getElementById('tela-inicio').style.display = 'none';
+            document.getElementById('tela-sala').style.display = 'block';
+            document.getElementById('display-codigo').innerText = codigoSala;
+            gerarQRCode();
+        });
+
+        // Restaura controles de config quando reconectado
+        socket.on('atualizar_config_aluno', (config) => {
+            if (!professorReconectando) return;
+            professorReconectando = false;
+            document.getElementById('tipo-pergunta').value = config.tipoPergunta;
+            if (config.qtdOpcoes) document.getElementById('qtd-opcoes').value = config.qtdOpcoes;
+            if (config.modoSelecao) document.getElementById('modo-selecao').value = config.modoSelecao;
+            atualizarConfig(true);
+        });
+
+        // Se a sala não existir mais (ex: servidor reiniciou), limpa sessão salva
+        socket.on('erro_sala', () => {
+            if (professorReconectando) {
+                professorReconectando = false;
+                sessionStorage.removeItem('gitwil-sala-codigo');
+            }
+        });
+
+        // =============================================
+        // === LÓGICA DE CRIAÇÃO DE SALA ===
+        // =============================================
+        let modoCodigo = 'aleatorio';
+
+        function selecionarModo(modo) {
+            modoCodigo = modo;
+            document.getElementById('btn-modo-aleatorio').classList.toggle('active', modo === 'aleatorio');
+            document.getElementById('btn-modo-manual').classList.toggle('active', modo === 'manual');
+            document.getElementById('painel-aleatorio').style.display = modo === 'aleatorio' ? 'block' : 'none';
+            document.getElementById('painel-manual').style.display = modo === 'manual' ? 'block' : 'none';
+            document.getElementById('msg-erro-sala').style.display = 'none';
+
+            if (modo === 'manual') {
+                document.getElementById('input-codigo-manual').focus();
+            }
+        }
+
+        function atualizarPreview() {
+            const qtd = parseInt(document.getElementById('slider-digitos').value);
+            document.getElementById('badge-digitos-valor').innerText = qtd;
+            document.getElementById('txt-qtd-digitos').innerText = qtd;
+            document.getElementById('preview-aleatorio').innerText = '•'.repeat(qtd);
+        }
+
+        function validarCodigoManual(input) {
+            input.value = input.value.replace(/\D/g, '');
+            document.getElementById('msg-erro-sala').style.display = 'none';
+        }
+
+        function criarSala() {
+            const msgErro = document.getElementById('msg-erro-sala');
+            msgErro.style.display = 'none';
+
+            if (modoCodigo === 'manual') {
+                const codigoManual = document.getElementById('input-codigo-manual').value.trim();
+                if (codigoManual.length < 3 || codigoManual.length > 10) {
+                    msgErro.innerText = 'O código deve ter entre 3 e 10 dígitos.';
+                    msgErro.style.display = 'block';
+                    return;
+                }
+                if (!/^\d+$/.test(codigoManual)) {
+                    msgErro.innerText = 'O código deve conter apenas números.';
+                    msgErro.style.display = 'block';
+                    return;
+                }
+                socket.emit('criar_sala', { codigoManual: codigoManual });
+            } else {
+                const qtdDigitos = parseInt(document.getElementById('slider-digitos').value) || 6;
+                socket.emit('criar_sala', { qtdDigitos: qtdDigitos });
+            }
+        }
+
+        socket.on('erro_criar_sala', (mensagem) => {
+            const msgErro = document.getElementById('msg-erro-sala');
+            msgErro.innerText = mensagem;
+            msgErro.style.display = 'block';
+        });
+
+        function gerarQRCode() {
+            const baseUrl = `${window.location.protocol}//${window.location.host}`;
+            document.getElementById("qrcode").innerHTML = "";
+            new QRCode(document.getElementById("qrcode"), { text: `${baseUrl}/aluno.html`, width: 128, height: 128 });
+        }
+
+        socket.on('sala_criada', (codigo) => {
+            codigoSala = codigo;
+            sessionStorage.setItem('gitwil-sala-codigo', codigo);
+            document.getElementById('tela-inicio').style.display = 'none';
+            document.getElementById('tela-sala').style.display = 'block';
+            document.getElementById('display-codigo').innerText = codigo;
+            gerarQRCode();
+            iniciarGrafico();
+            atualizarConfig();
+            document.getElementById('input-codigo-manual').value = '';
+            document.getElementById('msg-erro-sala').style.display = 'none';
+        });
+
+        // --- CORES ---
+        function gerarInputsDeCor(qtd, labels) {
+            const container = document.getElementById('container-cores');
+            container.innerHTML = '';
+            for(let i=0; i<qtd; i++) {
+                const corAtual = currentColors[i] || DEFAULT_PALETTE[i];
+                const letrasRef = ['A', 'B', 'C', 'D', 'E', 'Não sei'];
+                const letra = labels ? labels[i] : letrasRef[i];
+
+                // Grupo: color picker + botão texto
+                const group = document.createElement('div');
+                group.style.cssText = 'display:flex; flex-direction:column; align-items:center; gap:4px;';
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'color-wrapper';
+                wrapper.title = `Mudar cor ${letra}`;
+                const input = document.createElement('input');
+                input.type = 'color'; input.value = corAtual;
+                input.oninput = (e) => atualizarCorGrafico(i, e.target.value);
+                const label = document.createElement('span');
+                label.className = 'color-label'; label.innerText = letra[0];
+                wrapper.appendChild(input); wrapper.appendChild(label);
+
+                // Botão toggle claro/escuro
+                const btn = document.createElement('button');
+                btn.id = `btn-texto-cor-${i}`;
+                btn.title = `Cor do texto ${letra}`;
+                btn.style.cssText = 'width:35px; height:20px; border-radius:10px; border:2px solid var(--border-color); cursor:pointer; font-size:10px; font-weight:800; padding:0; line-height:1; transition:all 0.2s;';
+                const isClaro = labelColors[i] === '#ffffff';
+                btn.style.background = isClaro ? '#ffffff' : '#1a1a2e';
+                btn.style.color = isClaro ? '#1a1a2e' : '#ffffff';
+                btn.innerText = 'B';
+                btn.onclick = () => alternarCorTexto(i);
+
+                group.appendChild(wrapper);
+                group.appendChild(btn);
+                container.appendChild(group);
+            }
+        }
+
+        function alternarCorTexto(index) {
+            labelColors[index] = labelColors[index] === '#ffffff' ? '#1a1a2e' : '#ffffff';
+            const btn = document.getElementById(`btn-texto-cor-${index}`);
+            const isClaro = labelColors[index] === '#ffffff';
+            btn.style.background = isClaro ? '#ffffff' : '#1a1a2e';
+            btn.style.color = isClaro ? '#1a1a2e' : '#ffffff';
+            if (chartInstance) chartInstance.update();
+        }
+
+        function atualizarCorGrafico(index, novaCor) {
+            currentColors[index] = novaCor;
+            if(chartInstance) {
+                const qtd = chartInstance.data.datasets[0].data.length;
+                chartInstance.data.datasets[0].backgroundColor = currentColors.slice(0, qtd);
+                chartInstance.data.datasets[0].pointBackgroundColor = currentColors.slice(0, qtd);
+                chartInstance.update();
+            }
+        }
+
+        function salvarPaletaPersonalizada() {
+            localStorage.setItem('gitwil-palette', JSON.stringify(currentColors));
+        }
+
+        function resetarCores() {
+            // 1. Restaura cores (usa paleta salva pelo professor, ou a padrão se não houver)
+            const paletaSalva = JSON.parse(localStorage.getItem('gitwil-palette'));
+            currentColors = paletaSalva ? [...paletaSalva] : [...DEFAULT_PALETTE];
+            
+            // 2. Restaura tipo de gráfico para pizza
+            chartType = 'pie';
+            document.querySelectorAll('.btn-check-custom').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn-pie').classList.add('active');
+            
+            // 3. Restaura visualização para porcentagem
+            document.getElementById('tipo-dados').value = 'porcentagem';
+            document.getElementById('show-labels').checked = true;
+            
+            // 4. Restaura quantidade de opções para 6
+            document.getElementById('qtd-opcoes').value = '6';
+            
+            // 5. Restaura modo de seleção para única
+            document.getElementById('modo-selecao').value = 'unica';
+            
+            // 6. Restaura tipo de pergunta para múltipla escolha
+            document.getElementById('tipo-pergunta').value = 'multipla_escolha';
+            
+            // 7. Atualiza interface localmente sem notificar o servidor (evita reset dos votos)
+            atualizarConfig(true);
+
+            // 8. Reaplica os votos atuais para não perder os dados da votação em andamento
+            if (chartInstance && Object.values(dadosAtuais).some(val => val > 0)) {
+                chartInstance.data.labels = Object.keys(dadosAtuais);
+                chartInstance.data.datasets[0].data = Object.values(dadosAtuais);
+                const qtd = Object.keys(dadosAtuais).length;
+                chartInstance.data.datasets[0].backgroundColor = currentColors.slice(0, qtd);
+                chartInstance.data.datasets[0].pointBackgroundColor = currentColors.slice(0, qtd);
+                chartInstance.update();
+            }
+        }
+
+        function atualizarConfig(skipEmit = false) {
+            const tipo = document.getElementById('tipo-pergunta').value;
+            let qtd = parseInt(document.getElementById('qtd-opcoes').value);
+            const modo = document.getElementById('modo-selecao').value;
+            
+            const divOpcoes = document.getElementById('opcoes-multipla');
+            const divCores = document.getElementById('section-colors');
+            const divGraficos = document.getElementById('section-charts');
+            const areaCanvas = document.getElementById('area-canvas');
+            const areaPostits = document.getElementById('area-postits');
+
+            divOpcoes.style.display = 'block';
+            divCores.classList.remove('disabled-section');
+            divGraficos.classList.remove('disabled-section');
+            areaCanvas.style.display = 'block';
+            areaPostits.style.display = 'none';
+
+            if (tipo === 'certo_errado') {
+                divOpcoes.style.display = 'none';
+                qtd = 2; 
+                gerarInputsDeCor(2, ['Certo', 'Errado']);
+            } 
+            else if (tipo === 'discursiva') {
+                divOpcoes.style.display = 'none';
+                divCores.classList.add('disabled-section');
+                divGraficos.classList.add('disabled-section');
+                areaCanvas.style.display = 'none';
+                areaPostits.style.display = 'block';
+                document.getElementById('container-cores').innerHTML = '<span class="text-muted small">Sem cores para modo texto.</span>';
+            }
+            else {
+                gerarInputsDeCor(qtd);
+            }
+
+            if (tipo !== 'discursiva') {
+                if (chartInstance) chartInstance.destroy();
+                iniciarGrafico();
+            }
+
+            if (!skipEmit) {
+                socket.emit('alterar_config', { codigo: codigoSala, novaConfig: { tipoPergunta: tipo, qtdOpcoes: qtd, modoSelecao: modo } });
+            }
+        }
+
+        socket.on('atualizar_discursivas', (respostas) => {
+            const grid = document.getElementById('grid-respostas');
+            grid.innerHTML = '';
+            if (respostas.length === 0) {
+                grid.innerHTML = '<div class="text-center w-100 text-muted mt-5" style="grid-column: 1 / -1;">Nenhuma resposta recebida ainda.</div>';
+                return;
+            }
+            [...respostas].reverse().forEach((texto, index) => {
+                const card = document.createElement('div');
+                card.className = 'post-it-card';
+                const colorIndex = index % DEFAULT_PALETTE.length;
+                const dynamicColor = DEFAULT_PALETTE[colorIndex];
+                card.style.setProperty('--dynamic-color', dynamicColor);
+                const content = document.createElement('div');
+                content.className = 'post-it-content';
+                content.innerText = texto;
+                card.appendChild(content);
+                grid.appendChild(card);
+            });
+            document.getElementById('total-votos').innerText = respostas.length;
+        });
+
+        function atualizarLabels() { if(chartInstance) chartInstance.update(); }
+
+        function iniciarGrafico() {
+            const ctx = document.getElementById('meuGrafico').getContext('2d');
+            const textColor = isLight ? '#1a1a2e' : '#ffffff';
+            const gridColor = isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)';
+            const chartFont = { family: "'Poppins', 'Nunito', sans-serif", weight: '800' };
+
+            const tipoPergunta = document.getElementById('tipo-pergunta').value;
+            const qtdOpcoes = parseInt(document.getElementById('qtd-opcoes').value);
+
+            let labels = [];
+            let initialData = [];
+
+            if (tipoPergunta === 'certo_errado') {
+                labels = ['Certo', 'Errado'];
+                initialData = [0, 0];
+            } else {
+                const letrasGrafico = ['A', 'B', 'C', 'D', 'E', 'Não sei'];
+                for(let i=0; i<qtdOpcoes; i++) {
+                    labels.push(letrasGrafico[i]);
+                    initialData.push(0);
+                }
+            }
+
+            let scalesConfig = {};
+            if (chartType === 'bar' || chartType === 'line') {
+                scalesConfig = {
+                    y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor, font: { ...chartFont, size: 18 } } },
+                    x: { grid: { display: (chartType !== 'bar') }, ticks: { color: textColor, font: { ...chartFont, size: 18 } } }
+                };
+            } else if (chartType === 'polarArea' || chartType === 'radar') {
+                scalesConfig = {
+                    r: {
+                        grid: { color: gridColor },
+                        ticks: { backdropColor: 'transparent', color: textColor, font: { ...chartFont, size: 16 } },
+                        pointLabels: { color: textColor, font: { ...chartFont, size: 20 } }
+                    }
+                };
+            } else {
+                scalesConfig = { x: { display: false }, y: { display: false } };
+            }
+
+            const labelAlign = (chartType === 'line') ? 'top' : (chartType === 'bar') ? 'end' : 'center';
+            const labelAnchor = (chartType === 'line' || chartType === 'bar') ? 'end' : 'center';
+
+            chartInstance = new Chart(ctx, {
+                type: chartType,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Votos',
+                        data: initialData,
+                        backgroundColor: currentColors.slice(0, labels.length),
+                        borderColor: isLight ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)',
+                        pointBackgroundColor: currentColors.slice(0, labels.length),
+                        pointRadius: 6,
+                        borderWidth: 2,
+                        borderRadius: 6,
+                        hoverOffset: 4,
+                        fill: (chartType === 'radar'),
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: (chartType !== 'bar' && chartType !== 'line'), position: 'left', labels: { color: textColor, font: { ...chartFont, size: 20 }, usePointStyle: true, pointStyle: 'circle' } },
+                        datalabels: {
+                            display: function(context) {
+                                return document.getElementById('show-labels').checked && context.dataset.data[context.dataIndex] > 0;
+                            },
+                            color: function(context) { return labelColors[context.dataIndex] || '#ffffff'; },
+                            align: labelAlign,
+                            anchor: labelAnchor,
+                            font: { ...chartFont, size: 26 },
+                            formatter: function(value, context) {
+                                const tipo = document.getElementById('tipo-dados').value;
+                                let sum = 0;
+                                context.chart.data.datasets[0].data.forEach(d => { sum += d; });
+
+                                if (tipo === 'porcentagem') {
+                                    if (sum === 0) return "0%";
+                                    return (value * 100 / sum).toFixed(1) + "%";
+                                }
+                                if (tipo === 'ambos') {
+                                    if (sum === 0) return value + " - 0%";
+                                    return value + " - " + (value * 100 / sum).toFixed(1) + "%";
+                                }
+                                return value;
+                            }
+                        }
+                    },
+                    scales: scalesConfig
+                }
+            });
+        }
+
+        function mudarGrafico(tipo) {
+            chartType = tipo;
+            document.querySelectorAll('.btn-check-custom').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn-' + tipo).classList.add('active');
+            chartInstance.destroy();
+            iniciarGrafico();
+            
+            if(Object.values(dadosAtuais).some(val => val > 0)) {
+                chartInstance.data.datasets[0].data = Object.values(dadosAtuais);
+                const qtd = chartInstance.data.labels.length;
+                chartInstance.data.datasets[0].backgroundColor = currentColors.slice(0, qtd);
+                chartInstance.data.datasets[0].pointBackgroundColor = currentColors.slice(0, qtd);
+                chartInstance.update();
+            }
+        }
+
+        function resetarSala() { socket.emit('resetar_sala', codigoSala); }
+        function encerrarSessao() {
+            if(confirm("Encerrar sala e desconectar todos os alunos?")) {
+                socket.emit('encerrar_sala', codigoSala);
+                sessionStorage.removeItem('gitwil-sala-codigo');
+                document.getElementById('tela-sala').style.display = 'none';
+                document.getElementById('tela-inicio').style.display = 'block';
+                codigoSala = ''; dadosAtuais = { A:0, B:0, C:0, D:0 };
+                if(chartInstance) { chartInstance.destroy(); chartInstance = null; }
+            }
+        }
+
+        async function copiarGrafico() {
+            const canvasOriginal = document.getElementById('meuGrafico');
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvasOriginal.width;
+            tempCanvas.height = canvasOriginal.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.fillStyle = '#ffffff';
+            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            const oldTextColor = Chart.defaults.color;
+            if(chartInstance.options.scales.x) chartInstance.options.scales.x.ticks.color = '#000000';
+            if(chartInstance.options.scales.y) chartInstance.options.scales.y.ticks.color = '#000000';
+            if(chartInstance.options.scales.r) {
+                chartInstance.options.scales.r.pointLabels.color = '#000000';
+                chartInstance.options.scales.r.ticks.color = '#000000';
+            }
+            if (chartInstance.options.plugins.legend) chartInstance.options.plugins.legend.labels.color = '#000000';
+            chartInstance.update();
+            tempCtx.drawImage(canvasOriginal, 0, 0);
+            updateChartTheme();
+            tempCanvas.toBlob(async (blob) => {
+                try {
+                    const item = new ClipboardItem({ "image/png": blob });
+                    await navigator.clipboard.write([item]);
+                } catch (err) {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `GitWil_Grafico_${codigoSala}.png`;
+                    link.click();
+                }
+            });
+        }
+
+        async function copiarQRCode() {
+            const img = document.querySelector("#qrcode img");
+            if (!img) return;
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#FFFFFF'; 
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+                canvas.toBlob(async (blob) => {
+                    try {
+                        const item = new ClipboardItem({ "image/png": blob });
+                        await navigator.clipboard.write([item]);
+                    } catch (securityError) {
+                        console.warn("Clipboard bloqueado (Contexto Inseguro). Iniciando download.");
+                        const link = document.createElement('a');
+                        link.href = img.src;
+                        link.download = `GitWil_QR_${codigoSala}.png`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    }
+                }, 'image/png');
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        socket.on('atualizar_grafico', (votos) => {
+            dadosAtuais = votos;
+            if (!chartInstance) return;
+            chartInstance.data.labels = Object.keys(votos);
+            chartInstance.data.datasets[0].data = Object.values(votos);
+            const qtd = Object.keys(votos).length;
+            chartInstance.data.datasets[0].backgroundColor = currentColors.slice(0, qtd);
+            chartInstance.data.datasets[0].pointBackgroundColor = currentColors.slice(0, qtd);
+            let total = Object.values(votos).reduce((a, b) => a + b, 0);
+            document.getElementById('total-votos').innerText = total;
+            chartInstance.update();
+        });
+    </script>
+</body>
+</html>
