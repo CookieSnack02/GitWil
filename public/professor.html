@@ -166,16 +166,13 @@
 
             <!-- Seletor de Modo -->
             <div class="d-flex gap-3 justify-content-center mb-4" style="max-width: 500px; margin: 0 auto;">
-                <button class="modo-codigo-btn active" id="btn-modo-aleatorio" onclick="selecionarModo('aleatorio')">
-                    <i class="bi bi-shuffle"></i> Aleatório
-                </button>
-                <button class="modo-codigo-btn" id="btn-modo-manual" onclick="selecionarModo('manual')">
+                <button class="modo-codigo-btn active" id="btn-modo-manual" onclick="selecionarModo('manual')">
                     <i class="bi bi-keyboard"></i> Manual
                 </button>
             </div>
 
             <!-- Painel Modo Aleatório -->
-            <div id="painel-aleatorio" style="max-width: 500px; margin: 0 auto;">
+            <div id="painel-aleatorio" style="max-width: 500px; margin: 0 auto; display: none;">
                 <label class="form-label text-muted small fw-bold">QUANTIDADE DE DÍGITOS</label>
                 <div class="d-flex align-items-center gap-3 mb-3">
                     <span class="text-muted small fw-bold">3</span>
@@ -188,7 +185,7 @@
             </div>
 
             <!-- Painel Modo Manual -->
-            <div id="painel-manual" style="max-width: 500px; margin: 0 auto; display: none;">
+            <div id="painel-manual" style="max-width: 500px; margin: 0 auto; ">
                 <label class="form-label text-muted small fw-bold">DIGITE O CÓDIGO DA SALA</label>
                 <input type="text" class="campo-codigo-manual" id="input-codigo-manual" 
                        placeholder="Ex: 123456" maxlength="10" 
@@ -462,27 +459,10 @@
         // =============================================
         // === LÓGICA DE CRIAÇÃO DE SALA ===
         // =============================================
-        let modoCodigo = 'aleatorio';
+        let modoCodigo = 'manual';
 
-        function selecionarModo(modo) {
-            modoCodigo = modo;
-            document.getElementById('btn-modo-aleatorio').classList.toggle('active', modo === 'aleatorio');
-            document.getElementById('btn-modo-manual').classList.toggle('active', modo === 'manual');
-            document.getElementById('painel-aleatorio').style.display = modo === 'aleatorio' ? 'block' : 'none';
-            document.getElementById('painel-manual').style.display = modo === 'manual' ? 'block' : 'none';
-            document.getElementById('msg-erro-sala').style.display = 'none';
 
-            if (modo === 'manual') {
-                document.getElementById('input-codigo-manual').focus();
-            }
-        }
 
-        function atualizarPreview() {
-            const qtd = parseInt(document.getElementById('slider-digitos').value);
-            document.getElementById('badge-digitos-valor').innerText = qtd;
-            document.getElementById('txt-qtd-digitos').innerText = qtd;
-            document.getElementById('preview-aleatorio').innerText = '•'.repeat(qtd);
-        }
 
         function validarCodigoManual(input) {
             input.value = input.value.replace(/\D/g, '');
@@ -493,7 +473,7 @@
             const msgErro = document.getElementById('msg-erro-sala');
             msgErro.style.display = 'none';
 
-            if (modoCodigo === 'manual') {
+
                 const codigoManual = document.getElementById('input-codigo-manual').value.trim();
                 if (codigoManual.length < 3 || codigoManual.length > 10) {
                     msgErro.innerText = 'O código deve ter entre 3 e 10 dígitos.';
@@ -506,10 +486,7 @@
                     return;
                 }
                 socket.emit('criar_sala', { codigoManual: codigoManual });
-            } else {
-                const qtdDigitos = parseInt(document.getElementById('slider-digitos').value) || 6;
-                socket.emit('criar_sala', { qtdDigitos: qtdDigitos });
-            }
+
         }
 
         socket.on('erro_criar_sala', (mensagem) => {
