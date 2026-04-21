@@ -424,6 +424,7 @@
             const savedCodigo = sessionStorage.getItem('gitwil-sala-codigo');
             if (savedCodigo) {
                 if (!codigoSala) professorReconectando = true;
+                socket.emit('reconectar_professor', { codigo: savedCodigo });
                 socket.emit('entrar_sala', { codigo: savedCodigo });
             }
         });
