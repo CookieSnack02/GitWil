@@ -89,10 +89,9 @@
     <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
     <script>
         window.GITWIL_CONFIG = (() => {
-            const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            const apiUrl = isLocalHost
-                ? 'https://132.255.228.3:1001/app1'
-                : 'https://gitwil-api-production.up.railway.app';
+            // const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const apiUrl = 'https://132.255.228.3:1001/app1';
+            // : 'https://gitwil-api-production.up.railway.app';
 
             return {
                 apiUrl,
