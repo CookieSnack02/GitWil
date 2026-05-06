@@ -320,9 +320,13 @@
     window.GITWIL_CONFIG = (() => {
       // const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
       const apiUrl = 'http://132.255.228.3:1001/app1';
+      const socketUrl = 'http://132.255.228.3:1001';
+      const socketPath = '/app1/socket.io';
       // : 'https://gitwil-api-production.up.railway.app';
       return {
         apiUrl,
+        socketUrl,
+        socketPath,
         routes: {
           home: new URL('./app1-front/index.html', window.location.href).href,
           aluno: new URL('./app1-front/aluno.html', window.location.href).href,

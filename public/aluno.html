@@ -93,10 +93,14 @@
         window.GITWIL_CONFIG = (() => {
             // const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
             const apiUrl = 'http://132.255.228.3:1001/app1';
+            const socketUrl = 'http://132.255.228.3:1001';
+            const socketPath = '/app1/socket.io';
             // : 'https://gitwil-api-production.up.railway.app';
 
             return {
                 apiUrl,
+                socketUrl,
+                socketPath,
                 routes: {
                     home: new URL('./app1-front/index.html', window.location.href).href,
                     aluno: new URL('./app1-front/aluno.html', window.location.href).href,
@@ -108,6 +112,8 @@
         
         const savedTheme = localStorage.getItem('gitwil-theme');
         const apiUrl = window.GITWIL_CONFIG.apiUrl;
+        const socketUrl = window.GITWIL_CONFIG.socketUrl;
+        const socketPath = window.GITWIL_CONFIG.socketPath;
         const routes = window.GITWIL_CONFIG.routes;
 
         if (savedTheme === 'light') document.body.classList.add('light-mode');
@@ -143,7 +149,10 @@
         const alunoId = obterOuCriarIdVotante();
 
 //Agora usando WebSocket real via Railway (não mais long polling!)
-        const socket = io(apiUrl, { auth: { alunoId: alunoId } });
+        const socket = io(socketUrl, {
+            path: socketPath,
+            auth: { alunoId: alunoId }
+        });
         let codigoSala = '';
         let configAtual = {};
         let selecoes = [];
