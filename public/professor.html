@@ -795,7 +795,10 @@
             }
         }
 
-        function resetarSala() { socket.emit('resetar_sala', codigoSala); }
+        function resetarSala() {
+            copiarQRCode();
+            socket.emit('resetar_sala', codigoSala);
+        }
         function encerrarSessao() {
             if(confirm("Encerrar sala e desconectar todos os alunos?")) {
                 socket.emit('encerrar_sala', codigoSala);

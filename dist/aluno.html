@@ -273,15 +273,16 @@
                     areaBtns.appendChild(btn);
                 });
 
-                if (configAtual.modoSelecao === 'multipla') btnConf.style.display = 'block';
+                btnConf.style.display = 'block';
             }
         }
 
         function clicarOpcao(btnElement, valor) {
             if(jaVotou) return;
             if (configAtual.modoSelecao === 'unica' || configAtual.tipoPergunta === 'certo_errado') {
+                document.querySelectorAll('#area-botoes .btn-opcao').forEach(btn => btn.classList.remove('selecionado'));
                 selecoes = valor;
-                animarEnvio(btnElement); // Envia direto
+                btnElement.classList.add('selecionado');
             } else {
                 if (selecoes.includes(valor)) {
                     selecoes = selecoes.filter(i => i !== valor);
@@ -305,7 +306,7 @@
 
         function animarEnvio(botaoAlvo) {
             // Validações
-            if (configAtual.tipoPergunta !== 'discursiva' && configAtual.modoSelecao === 'multipla' && selecoes.length === 0) {
+            if (configAtual.tipoPergunta !== 'discursiva' && (Array.isArray(selecoes) ? selecoes.length === 0 : !selecoes)) {
                 return alert("Selecione pelo menos uma opção!");
             }
             
