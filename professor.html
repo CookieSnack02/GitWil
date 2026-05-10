@@ -362,6 +362,11 @@
         // --- LOGOUT (agora redireciona para index.html) ---
         function fazerLogout() {
             if(confirm("Deseja realmente sair?")) {
+                if (codigoSala) {
+                    socket.emit('encerrar_sala', codigoSala);
+                    sessionStorage.removeItem('gitwil-sala-codigo');
+                    codigoSala = '';
+                }
                 sessionStorage.removeItem('gitwil-admin-auth');
                 window.location.href = routes.home;
             }
